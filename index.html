@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Notes on Quantum Error Correction</title>
+<meta name="description" content="Notes on quantum error correction with interactive pictures of the amplitudes, subspaces and circuits, following Roffe's introductory guide; from stabilizer measurements to CSS and qLDPC codes.">
+<link rel="stylesheet" href="assets/qec.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    macros: {
+      ket: ['\\left|#1\\right\\rangle', 1],
+      bra: ['\\left\\langle#1\\right|', 1],
+      L: '\\mathrm{L}',
+      I: '\\mathbb{1}'
+    }
+  },
+  svg: { fontCache: 'global' },
+  options: { ignoreHtmlClass: 'qec-widget', skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+</head>
+<body>
+<div class="wrap">
+<nav class="top" aria-label="site">
+  <span>Contents</span>
+  <a href="https://arxiv.org/abs/1907.11157">Roffe (2019)</a>
+  <a href="https://github.com/zazabap/qec-note">Source</a>
+  <span class="right"><a href="https://zazabap.github.io">zazabap.github.io</a></span>
+</nav>
+<main>
+<h1>Notes on quantum error correction</h1>
+<p class="lead">A companion to Joschka Roffe's <a href="https://arxiv.org/abs/1907.11157"><em>Quantum error correction: an introductory guide</em></a>, one part per section, in which every state is small enough to draw and every picture responds when you apply an error.</p>
+
+<p>The paper is the best short route from "a qubit cannot be cloned" to the surface code, and it is written so that its examples can be checked by hand. These notes follow its numbering and its examples closely, so that the two can be read side by side, and add the thing a printed page cannot: the amplitudes themselves, drawn as bars and grouped by subspace, together with the circuits that measure them, stepped one gate at a time. The explanations here are my own; equation numbers in the margins refer to the paper.</p>
+
+<h2>Parts</h2>
+<ol class="contents">
+  <li><a href="01-stabilizer-measurement.html">Quantum redundancy and stabilizer measurement</a>
+    <span class="desc">Roffe §3. The two- and three-qubit codes, codespace and error spaces, the syndrome-extraction circuit, error suppression by detection, and why the code distance of the three-qubit code is 1.</span></li>
+  <li>Stabilizer codes<span class="planned">planned</span>
+    <span class="desc">Roffe §4. The stabilizer formalism, the \([[4,2,2]]\) detection code, logical operators, and the Shor code.</span></li>
+  <li>CSS codes<span class="planned">planned</span>
+    <span class="desc">Two classical codes, one quantum code: the Calderbank–Shor–Steane construction, with the Steane code as the worked example.</span></li>
+  <li>Quantum LDPC codes<span class="planned">planned</span>
+    <span class="desc">Codes whose checks stay small as the code grows: hypergraph products and the basics of belief-propagation decoding.</span></li>
+</ol>
+
+<h2>How the figures work</h2>
+<p>Circles are qubits. Clicking one applies a Pauli error to it and cycles through the errors that figure allows, typically no error, then \(X\), then \(Z\). Bars are amplitudes: the state is written in the computational basis and each basis state gets a column, drawn upward for a positive amplitude and downward for a negative one, with the columns grouped into the codespace \(\C\) and the error spaces \(\F_i\). Each stabilizer reports its eigenvalue on the current state, \(+1\) or \(-1\), and the syndrome collects those readings as bits. Circuit figures are stepped gate by gate, showing the register after each stage, split by the value of the ancilla.</p>
+<p>Nothing is approximated. For the small codes of part 1 the figures keep a real state vector of \(2^N\) amplitudes with \(N \le 5\); syndromes, logical actions and distances are computed in the binary symplectic representation of Pauli operators, which is the calculation the stabilizer formalism asks you to do by hand and which continues to work for the large codes of later parts.</p>
+
+<h2>Notation</h2>
+<p>Single-qubit states are kets, \(\ket\psi = \alpha\ket0 + \beta\ket1\) with \(|\alpha|^2 + |\beta|^2 = 1\). The Pauli matrices are</p>
+\[
+X = \begin{pmatrix} 0 & 1 \\ 1 & 0 \end{pmatrix},\qquad
+Z = \begin{pmatrix} 1 & 0 \\ 0 & -1 \end{pmatrix},\qquad
+Y = iXZ = \begin{pmatrix} 0 & -i \\ i & 0 \end{pmatrix}.
+\]
+<p>A subscript names the qubit an operator acts on, so \(X_1Z_3\) applies \(X\) to qubit 1 and \(Z\) to qubit 3. Qubits are numbered from 1, as in the paper, and a multi-qubit ket \(\ket{q_1 q_2 \ldots}\) lists them left to right. Encoded, or <em>logical</em>, states and operators carry a subscript or a bar: \(\ket\psi_\L\), \(\bar X\), \(\bar Z\). A code is summarised as \([[n, k, d]]\): \(n\) physical qubits carrying \(k\) logical qubits with distance \(d\).</p>
+
+<h2>Colophon</h2>
+<p>Plain HTML, one stylesheet and four small JavaScript modules; no framework and no build step, so the pages work from a file system, from GitHub Pages, or as a git submodule of another site. MathJax is loaded from a CDN and renders to SVG. Source and issues: <a href="https://github.com/zazabap/qec-note">github.com/zazabap/qec-note</a>.</p>
+</main>
+<footer>
+<p>Notes on quantum error correction, by Shiwen An. Text under CC BY 4.0, code under the MIT licence.</p>
+</footer>
+</div>
+</body>
+</html>

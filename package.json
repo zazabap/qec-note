@@ -1,0 +1,12 @@
+{
+  "name": "qec-note",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Notes on quantum error correction with interactive subspace and circuit pictures; static HTML, no build step",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "build:artifact": "python3 tools/build-artifact.py"
+  },
+  "license": "MIT"
+}

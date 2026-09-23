@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quantum Redundancy and Stabilizer Measurement</title>
+<meta name="description" content="How a qubit is protected without being copied or read: the two- and three-qubit codes, stabilizer measurements, syndromes and code distance, with the amplitudes drawn as you apply errors. Part 1 of a set of notes following Roffe's introductory guide, section 3.">
+<link rel="stylesheet" href="assets/qec.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    tags: 'none',
+    macros: {
+      ket: ['\\left|#1\\right\\rangle', 1],
+      bra: ['\\left\\langle#1\\right|', 1],
+      L: '\\mathrm{L}',
+      I: '\\mathbb{1}',
+      C: '\\mathcal{C}',
+      F: '\\mathcal{F}',
+      H: '\\mathcal{H}',
+      span: '\\operatorname{span}'
+    }
+  },
+  svg: { fontCache: 'global' },
+  options: { ignoreHtmlClass: 'qec-widget', skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+<script type="module" src="assets/widgets.js"></script>
+</head>
+<body>
+<div class="wrap">
+<nav class="top" aria-label="site">
+  <a href="index.html">Contents</a>
+  <a href="https://arxiv.org/abs/1907.11157">Roffe (2019)</a>
+  <a href="https://github.com/zazabap/qec-note">Source</a>
+  <span class="right"><a href="https://zazabap.github.io">zazabap.github.io</a></span>
+</nav>
+<main>
+<p class="crumbs">Notes on quantum error correction · Part 1 · follows Roffe, section 3</p>
+<h1>Quantum redundancy and stabilizer measurement</h1>
+<p class="lead">How a qubit is protected without being copied or read: its state is spread over a larger Hilbert space, and a measurement asks only <em>which subspace</em> it is in.</p>
+
+<p>Section 2 of the paper leaves quantum error correction facing three obstacles that a classical repetition code never meets. A qubit cannot be cloned, so it cannot simply be stored three times. Reading a qubit collapses it, so copies could not be compared even if they existed. And besides the bit flip \(X\), which swaps \(\ket0\) and \(\ket1\), there is a second elementary error with no classical counterpart, the phase flip \(Z\), which sends \(\alpha\ket0 + \beta\ket1\) to \(\alpha\ket0 - \beta\ket1\). This part follows section 3 of the paper: it shows how the first two obstacles are handled by the two-qubit and three-qubit codes, and how the third defeats both of them, which is the reason the stabilizer codes of part 2 exist.</p>
+
+<p>The idea throughout is that redundancy is added by <em>expanding the Hilbert space</em>. Encoding maps the state of one qubit into a two-dimensional subspace of a bigger space. Errors move the state into other subspaces. A projective measurement can tell subspaces apart without telling apart the two states inside a subspace, and that distinction, between <em>where</em> the state is and <em>what</em> it encodes, is the whole of the trick.</p>
+
+<p class="eyebrow">Roffe §3</p>
+<h2>Encoding without cloning: the two-qubit code</h2>
+
+<p>Take a qubit \(\ket\psi = \alpha\ket0 + \beta\ket1\) and a second qubit prepared in \(\ket0\). A single CNOT gate, controlled on the first qubit, gives</p>
+\[
+\ket\psi = \alpha\ket0 + \beta\ket1
+\;\longmapsto\;
+\ket\psi_\L = \alpha\ket{00} + \beta\ket{11} = \alpha\ket0_\L + \beta\ket1_\L .
+\qquad\text{(paper, eq. 12)}
+\]
+<p>This is not a copy. The product \(\ket\psi\otimes\ket\psi\) would contain \(\alpha\beta\ket{01}\) and \(\alpha\beta\ket{10}\) terms, and \(\ket\psi_\L\) has none (eq. 13). Nothing has been duplicated: the two amplitudes are now shared by an entangled pair, and neither qubit on its own carries them.</p>
+
+<p>Before encoding, the state lives in \(\H_2 = \span\{\ket0, \ket1\}\). After encoding it lives in a four-dimensional space, but only in a two-dimensional slice of it,</p>
+\[
+\ket\psi_\L \in \C = \span\{\ket{00}, \ket{11}\} \subset \H_4 = \span\{\ket{00}, \ket{01}, \ket{10}, \ket{11}\},
+\qquad\text{(eq. 14, 15)}
+\]
+<p>and \(\C\) is called the <em>codespace</em>. Now let a bit flip hit the first qubit. The state becomes \(X_1\ket\psi_\L = \alpha\ket{10} + \beta\ket{01}\), which lies entirely in the orthogonal complement \(\F = \span\{\ket{01}, \ket{10}\}\), the <em>error space</em> (eq. 16, 17). A flip on the second qubit lands in \(\F\) as well. Figure A draws the four amplitudes as bars, with the two subspaces as bands. Click a qubit: the bars jump from \(\C\) to \(\F\), but their heights do not change. The error moved the state; it did not touch \(\alpha\) and \(\beta\).</p>
+
+<qec-state-view code="two-qubit" allowed="X" label="A" title="The two-qubit code: codespace and error space"></qec-state-view>
+
+<h3>The stabilizer measurement</h3>
+
+<p>Because \(\C\) and \(\F\) are orthogonal, a projective measurement can tell them apart. The operator that does it is \(Z_1Z_2\). It has eigenvalue \(+1\) on both \(\ket{00}\) and \(\ket{11}\), so on every state in the codespace,</p>
+\[
+Z_1Z_2\,\ket\psi_\L = Z_1Z_2\,(\alpha\ket{00} + \beta\ket{11}) = (+1)\,\ket\psi_\L ,
+\qquad\text{(eq. 18)}
+\]
+<p>and eigenvalue \(-1\) on \(\ket{01}\) and \(\ket{10}\), so on every state in \(\F\). An operator that leaves every code state unchanged is said to <em>stabilize</em> the code, and a measurement of it is a <em>stabilizer measurement</em>. The outcome, \(+1\) or \(-1\), projects the state onto \(\C\) or \(\F\). Inside either subspace the two amplitudes are left alone, because the measurement never distinguishes \(\ket{00}\) from \(\ket{11}\), or \(\ket{01}\) from \(\ket{10}\). It collapses the subspace question and nothing else.</p>
+
+<p>In a circuit the measurement is done through a helper qubit, the <em>ancilla</em>, prepared in \(\ket0_A\). The paper's figure 2 sandwiches a controlled-\(Z_1Z_2\) between two Hadamards on the ancilla, and Figure B below steps through it. Written out, the syndrome-extraction stage acts as</p>
+\[
+E\ket\psi_\L\ket0_A
+\;\longmapsto\;
+\tfrac12\bigl(\I + Z_1Z_2\bigr)E\ket\psi_\L\,\ket0_A
++ \tfrac12\bigl(\I - Z_1Z_2\bigr)E\ket\psi_\L\,\ket1_A ,
+\qquad\text{(eq. 19)}
+\]
+<p>where \(E\) is whatever happened in the error stage. If \(E\ket\psi_\L\) lies in \(\C\), the second term vanishes and the ancilla is found in \(\ket0\). If it lies in \(\F\), the first term vanishes and the ancilla is found in \(\ket1\). The bit read off the ancilla is the <em>syndrome</em>. Watch, in the circuit, how the controlled operation writes the eigenvalue of \(Z_1Z_2\) as a <em>sign</em> onto the ancilla's \(\ket1\) branch, and how the second Hadamard turns that sign into a population that a measurement can see.</p>
+
+<qec-circuit code="two-qubit" coherent label="B" title="The two-qubit code, gate by gate (paper's figure 2)"></qec-circuit>
+
+<p>The syndromes of the four possible bit-flip patterns are the paper's table 1:</p>
+<table class="tbl">
+<thead><tr><th>error</th><th>\(Z_1Z_2\)</th><th>syndrome \(S\)</th><th>what it means</th></tr></thead>
+<tbody>
+<tr><td class="mono">I₁I₂</td><td>\(+1\)</td><td class="mono">0</td><td>nothing happened</td></tr>
+<tr><td class="mono">X₁I₂</td><td>\(-1\)</td><td class="mono">1</td><td>detected</td></tr>
+<tr><td class="mono">I₁X₂</td><td>\(-1\)</td><td class="mono">1</td><td>detected</td></tr>
+<tr><td class="mono">X₁X₂</td><td>\(+1\)</td><td class="mono">0</td><td>not detected, and harmful</td></tr>
+</tbody>
+</table>
+<p>Two things are missing from this table. \(X_1\) and \(X_2\) give the same syndrome, so the code knows that a flip happened but not where, and cannot undo it: it is a <em>detection</em> code. And \(X_1X_2\) gives no syndrome at all while turning \(\alpha\ket{00} + \beta\ket{11}\) into \(\alpha\ket{11} + \beta\ket{00}\), which is the encoding of \(X\ket\psi\). An operator that commutes with every stabilizer but changes the encoded state is a <em>logical operator</em>; this one is the logical bit flip \(\bar X = X_1X_2\).</p>
+
+<h3>Detection alone already suppresses errors</h3>
+
+<p>So far the error stage applied a definite Pauli. The paper's second model is more honest about hardware: each qubit is subjected to a coherent error</p>
+\[
+E = \alpha_I\,\I + \alpha_X\,X, \qquad |\alpha_I|^2 + |\alpha_X|^2 = 1,
+\qquad\text{(eq. 20)}
+\]
+<p>where \(p_X = |\alpha_X|^2\) is the probability that a bare qubit suffers a bit flip. On the two encoded qubits the product expands into four terms,</p>
+\[
+E_1\otimes E_2 = \alpha_I^2\,\I + \alpha_I\alpha_X\,(X_1 + X_2) + \alpha_X^2\,X_1X_2 ,
+\qquad\text{(eq. 21)}
+\]
+<p>and syndrome extraction sorts them by syndrome (eq. 22): \(\I\) and \(X_1X_2\) go with ancilla \(\ket0\), \(X_1\) and \(X_2\) with ancilla \(\ket1\). When the syndrome reads 1 we know something went wrong. When it reads 0 the state has collapsed to</p>
+\[
+\frac{\alpha_I^2\,\I + \alpha_X^2\,X_1X_2}{\sqrt{|\alpha_I^2|^2 + |\alpha_X^2|^2}}\;\ket\psi_\L ,
+\qquad\text{(eq. 23)}
+\]
+<p>and the only thing that can still be wrong is the logical flip, whose weight is</p>
+\[
+p_L = \frac{|\alpha_X^2|^2}{|\alpha_I^2|^2 + |\alpha_X^2|^2} = \frac{p_X^2}{(1 - p_X)^2 + p_X^2} \approx p_X^2 .
+\qquad\text{(eq. 24)}
+\]
+<p>A bare qubit fails with probability \(p_X\). The encoded qubit, on the runs where its syndrome is clean, fails with probability about \(p_X^2\): the measurement has converted most of the error into a flag that says "discard this run". Figure C plots the two against each other; at \(p_X = 0.1\) the code is roughly eight times better, at \(p_X = 0.01\) a hundred times. The two curves meet at \(p_X = \tfrac12\), where a qubit is as likely flipped as not and no amount of checking helps.</p>
+
+<qec-suppression label="C" p="0.1"></qec-suppression>
+
+<aside class="note">
+<p><strong>A detail the paper glosses over.</strong> Written with real coefficients as in eq. 20, \(E\) is not unitary; the physical rotation \(e^{-i\phi X}\) with \(\sin^2\phi = p_X\) is, and gives the same branch probabilities for \(\ket0_\L\) and \(\ket1_\L\) inputs. For a general input the \(X_1\) and \(X_2\) terms feed the <em>same</em> basis states, since \(\ket{01}\) receives \(\beta\) from \(X_1\) and \(\alpha\) from \(X_2\), so their amplitudes add before being squared. Figure B in coherent mode shows this: it applies eq. 20 literally, renormalises, and the fidelity it reports at the end agrees with eq. 24 exactly only when \(\alpha\beta = 0\). The paper's \(p_L\) is the weight of the operator \(X_1X_2\) in the surviving branch, which is the useful number for designing codes; it is not, in general, one minus a state fidelity.</p>
+</aside>
+
+<p class="eyebrow">Roffe §3.1</p>
+<h2>Locating the error: the three-qubit code</h2>
+
+<p>To correct rather than just detect, the syndrome has to say <em>which</em> qubit flipped, and one bit cannot. Add a third qubit and a second CNOT from qubit 1: the encoded state is \(\ket\psi_\L = \alpha\ket{000} + \beta\ket{111}\). Its eight-dimensional Hilbert space splits into four two-dimensional pieces,</p>
+\[
+\C = \span\{\ket{000}, \ket{111}\},\quad
+\F_1 = \span\{\ket{100}, \ket{011}\},\quad
+\F_2 = \span\{\ket{010}, \ket{101}\},\quad
+\F_3 = \span\{\ket{001}, \ket{110}\},
+\qquad\text{(eq. 25)}
+\]
+<p>and each single flip carries the codespace onto its own piece, \(X_i\ket\psi_\L \in \F_i\). Two stabilizers, \(Z_1Z_2\) and \(Z_2Z_3\), are both \(+1\) on \(\C\), and their pair of eigenvalues is different on each \(\F_i\): \((-1, +1)\) on \(\F_1\), \((-1, -1)\) on \(\F_2\), \((+1, -1)\) on \(\F_3\). The two-bit syndrome \(S = s_1 s_2\) therefore names the error space, hence the qubit, and applying the same \(X_i\) again brings the state home. That is a <em>correction</em> code for a single bit flip. Figure D has the decoder switched on: it reads the syndrome, looks up the flip that produces it, and applies it. Try one flip, then two.</p>
+
+<qec-state-view code="three-qubit" allowed="X" decoder label="D" title="The three-qubit code, with the lookup-table decoder"></qec-state-view>
+
+<aside class="note">
+<p><strong>A typo in the paper.</strong> Eq. 25 prints \(\F_1 = \span\{\ket{100}, \ket{110}\}\). Since \(X_1(\alpha\ket{000} + \beta\ket{111}) = \alpha\ket{100} + \beta\ket{011}\), the second vector should be \(\ket{011}\), as above; \(\ket{110}\) belongs to \(\F_3\).</p>
+</aside>
+
+<p>With three qubits there are eight bit-flip patterns and only four syndromes, so some patterns must share. Figure E lists them all (the paper's table 2). The weight-two patterns each collide with a single flip on the remaining qubit, so the decoder, which always assumes the lightest explanation, completes them to \(X_1X_2X_3\); and \(X_1X_2X_3\) has syndrome 00 and is the logical \(\bar X\). This is exactly how a classical majority vote fails when two of three bits are wrong.</p>
+
+<qec-syndrome-table code="three-qubit" errors="X" label="E"></qec-syndrome-table>
+
+<p>The circuit, the paper's figure 3, is the two-qubit circuit with one more redundancy qubit and one more ancilla. Each stabilizer gets its own ancilla and its own Hadamard sandwich; measuring both ancillas gives \(S\). Figure F includes the recovery stage. Run it with a single flip and the final fidelity is one; run it with two flips and the recovery completes the logical error; run it in coherent mode and watch a superposition over all four error spaces get sorted into four rows, one of which survives the measurement.</p>
+
+<qec-circuit code="three-qubit" coherent decoder label="F" title="The three-qubit code, gate by gate (paper's figure 3)"></qec-circuit>
+
+<p class="eyebrow">Roffe §3.2</p>
+<h2>Quantum code distance</h2>
+
+<p>As for classical codes, the <em>distance</em> \(d\) of a quantum code is the smallest number of qubits an error must touch to go undetected while still changing the encoded state. Equivalently it is the weight of the lightest logical Pauli operator, the lightest operator that maps one codeword onto another. For the three-qubit code the logical bit flip is</p>
+\[
+\bar X = X_1X_2X_3, \qquad \bar X\ket0_\L = \ket1_\L,\quad \bar X\ket1_\L = \ket0_\L ,
+\qquad\text{(eq. 26)}
+\]
+<p>of weight three. If bit flips were the only errors, the code would have \(d = 3\) and would correct \(t = \lfloor (d-1)/2 \rfloor = 1\) of them, which is what Figures D and F show.</p>
+
+<p>But phase flips are errors too, and to see what they do it helps to switch to the conjugate basis,</p>
+\[
+\ket+ = \tfrac{1}{\sqrt2}(\ket0 + \ket1), \qquad \ket- = \tfrac{1}{\sqrt2}(\ket0 - \ket1),
+\qquad\text{(eq. 27)}
+\]
+<p>in which \(Z\) acts as a flip: \(Z\ket+ = \ket-\) and \(Z\ket- = \ket+\). Encoding the two conjugate states gives</p>
+\[
+\ket+_\L = \tfrac{1}{\sqrt2}\bigl(\ket{000} + \ket{111}\bigr), \qquad
+\ket-_\L = \tfrac{1}{\sqrt2}\bigl(\ket{000} - \ket{111}\bigr),
+\qquad\text{(eq. 28)}
+\]
+<p>and a single phase flip on any one qubit changes the sign of the \(\ket{111}\) amplitude: \(Z_1\ket+_\L = \ket-_\L\). Both stabilizers are products of \(Z\)s and commute with \(Z_1\), so the syndrome is 00 and nothing is detected. \(\bar Z = Z_1\) is a logical operator of weight one, and the quantum distance of the three-qubit code is \(d = 1\). It corrects nothing.</p>
+
+<p>Figure G starts from \(\ket+\) and allows both kinds of error. Apply \(Z_1\): the bars stay in \(\C\), one of them flips downward, both meters stay at \(+1\), and the overlap table shows the state has moved from \(\ket+_\L\) to \(\ket-_\L\). Apply \(X_1\) instead and the error is caught at once. The code is blind in exactly one direction.</p>
+
+<qec-state-view code="three-qubit" allowed="XZ" logical theta="1.5708" label="G" title="Phase flips on the three-qubit code, in the conjugate basis"></qec-state-view>
+
+<h3>Where this goes next</h3>
+
+<p>A code that catches \(Z\) errors needs stabilizers made of \(X\)s, since \(X\)-type operators are the ones that anticommute with \(Z\); a code that catches both needs stabilizers of both types, and they have to commute with one another so that they can all be measured on the same state. That constraint, and the bookkeeping that comes with it, is the stabilizer formalism of the paper's section 4, which is where part 2 of these notes picks up. From there the road goes to CSS codes, built from pairs of classical codes, and to quantum LDPC codes, whose stabilizers stay small as the code grows.</p>
+</main>
+<footer>
+<p>Part 1 of <a href="index.html">Notes on quantum error correction</a>, by Shiwen An. The structure follows Joschka Roffe, <em>Quantum error correction: an introductory guide</em>, Contemporary Physics 60, 226 (2019), <a href="https://arxiv.org/abs/1907.11157">arXiv:1907.11157</a>, section 3; equation numbers in the margins refer to it. The text, figures and code here are original. Text under CC BY 4.0, code under the MIT licence. Revised 23 September 2026.</p>
+</footer>
+</div>
+</body>
+</html>
