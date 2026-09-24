@@ -5,7 +5,7 @@ Interactive notes on quantum error correction, served at
 
 | Note | Topic |
 |---|---|
-| [01-stabilizer-measurement.html](01-stabilizer-measurement.html) | Quantum redundancy and stabilizer measurement ([Roffe](https://arxiv.org/abs/1907.11157), §3) |
+| [01-quantum-redundancy.html](01-quantum-redundancy.html) | Quantum redundancy and stabilizer measurement ([Roffe](https://arxiv.org/abs/1907.11157), §3) |
 
 Plain HTML with ES-module widgets in `assets/`. There is no build step.
 

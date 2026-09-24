@@ -14,7 +14,7 @@ small enough to draw, so each part draws it: the amplitudes of the encoded
 state as bars grouped by subspace, the stabilizer meters reading $$+1$$ or
 $$-1$$, and the syndrome-extraction circuit stepped one gate at a time.
 
-Part 1, [Quantum redundancy and stabilizer measurement](/qec-note/01-stabilizer-measurement.html),
+Part 1, [Quantum redundancy and stabilizer measurement](/qec-note/01-quantum-redundancy.html),
 covers the paper's section 3: the two- and three-qubit codes, the codespace
 and error spaces, the ancilla circuit, error suppression by detection alone,
 and why the three-qubit code has quantum distance 1. Parts on stabilizer

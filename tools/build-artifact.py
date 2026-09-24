@@ -23,7 +23,7 @@ BASE = 'https://zazabap.github.io/qec-note/'
 MODULES = ['pauli.js', 'codes.js', 'state.js', 'widgets.js']
 
 parser = argparse.ArgumentParser()
-parser.add_argument('page', nargs='?', default='01-stabilizer-measurement.html')
+parser.add_argument('page', nargs='?', default='01-quantum-redundancy.html')
 parser.add_argument('-o', '--out', default='dist/artifact.html')
 args = parser.parse_args()
 
