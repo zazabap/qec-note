@@ -169,6 +169,10 @@ summary { cursor: pointer; color: var(--muted); }
 .check.minus { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .check.mixed { border-style: dashed; color: var(--muted); }
 
+/* error panel under the circuit */
+.error-panel { margin-top: 1rem; padding-top: 0.7rem; border-top: 1px dashed var(--rule); }
+.panel-head { margin: 0 0 0.3rem; }
+
 /* ancilla outcomes under the circuit */
 .outcomes { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.6rem; margin: 0.4rem 0; }
 .outcomes-name { color: var(--muted); }

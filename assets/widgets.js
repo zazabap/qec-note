@@ -279,7 +279,7 @@ class QecStateView extends Base {
     const code = this.code;
     const psi = State.fromAngle(this.theta);
     const encoded = encode(code, psi);
-    const state = encoded.clone().applyPauli(this.err);
+    const state = encoded.clone().applyPauliUpToPhase(this.err);
     const c = code.classify(this.err);
     const dX = code.distance(['X']);
     const d = code.distance();
@@ -328,6 +328,7 @@ class QecCircuit extends Base {
       : attr(this, 'error') ? Pauli.fromString(attr(this, 'error'), this.n) : Pauli.single(this.n, 0, 'X');
     if (this.fig) this.fig.addEventListener('qec-error', () => { this.mode = 'pauli'; this.outcome = null; this.render(); });
     this.mode = 'pauli';               // or 'coherent'
+    this.allowed = kinds(attr(this, 'allowed', 'X'));
     this.p = 0.1;
     this.outcome = null;               // measured syndrome, once sampled
     this.layout = subspaces(this.code);
@@ -367,7 +368,7 @@ class QecCircuit extends Base {
           for (const g of this.code.extra.encoder) s.cnot(g.control, g.target);
           break;
         case 'error':
-          if (this.mode === 'pauli') s.applyPauli(this.err);
+          if (this.mode === 'pauli') s.applyPauliUpToPhase(this.err);
           else { for (let q = 0; q < this.n; q++) s.coherentBitFlip(q, this.p); s.normalize(); }
           break;
         case 'h1': case 'h2':
@@ -529,7 +530,7 @@ class QecCircuit extends Base {
         return `CNOTs from qubit 1 spread the amplitudes onto |${'0'.repeat(n)}⟩ and |${'1'.repeat(n)}⟩ (eq. 12). Nothing is copied: the two amplitudes are still α and β, now shared by ${n} qubits. The state lies in the codespace C.`;
       case 'error':
         return this.mode === 'pauli'
-          ? (this.err.isIdentity() ? 'No error this time. The state is still in C.' : `${errName} rotates the state out of C into an error space, without touching α and β. The subspace view below shows where it went.`)
+          ? (this.err.isIdentity() ? 'No error this time. The state is still in C.' : `${errName} moves the state out of C into an error space, or within C if it is a logical operator, without touching the stored amplitudes. The panel below shows where it went.`)
           : `The coherent error ${errName} (eq. 20) puts the state in a superposition over C and the error spaces, with weight (1−p)^${n} on "nothing happened" and smaller weights on each flip pattern (eq. 21).`;
       case 'h1':
         return `Hadamards put the ${anc} in |+⟩. Both branches of the ${anc} now hold a copy of the data state; nothing has been learned yet.`;
@@ -549,6 +550,10 @@ class QecCircuit extends Base {
         const XL = psiL.clone().applyPauli(this.code.logicals[0].X);
         const FX = data.fidelity(XL);
         const applied = correction && !correction.isIdentity() ? `The lookup table maps S = ${this.outcome} to ${correction.toLabelled(this.code.labels)}, which is applied. ` : `Syndrome ${this.outcome} asks for no correction. `;
+        if (this.mode === 'pauli') {
+          const r = this.code.classify(this.err.mul(correction ?? Pauli.identity(this.n)));
+          if (r.kind === 'logical') return `${applied}Fidelity to |ψ⟩ᴸ: ${fmt(F, 3)}. The net effect is a logical ${r.action.join(' ')}${r.action.some((a) => a.startsWith('X̄')) && correction && !correction.isIdentity() ? ': the correction completed a logical bit flip, and the decoder was fooled' : ', which no syndrome can see'}.`;
+        }
         if (F > 0.9995) return `${applied}Fidelity to the encoded input |ψ⟩ᴸ: ${fmt(F, 3)}. Recovered.`;
         if (FX > 0.9995) return `${applied}Fidelity to |ψ⟩ᴸ: ${fmt(F, 3)}; to X̄|ψ⟩ᴸ: ${fmt(FX, 3)}. The correction completed a logical bit flip: the decoder was fooled.`;
         return `${applied}Fidelity to |ψ⟩ᴸ: ${fmt(F, 3)}; to X̄|ψ⟩ᴸ: ${fmt(FX, 3)}. The residual is a superposition of "nothing happened" and a logical X̄; the operator weight of X̄ is what eq. 24 calls p_L.`;
@@ -570,26 +575,70 @@ class QecCircuit extends Base {
         h('span', { class: 'mono' }, `S = ${b.bits}`), ` p = ${fmt(b.prob, 3)}`)));
   }
 
+  setError(mutate) {
+    this.mode = 'pauli';
+    mutate(this.err);
+    this.outcome = null;
+    if (this.fig) this.fig.broadcast(); else this.render();
+  }
+
+  cycle(i) {
+    const order = ['I', ...this.allowed];
+    this.setError((e) => e.set(i, order[(order.indexOf(e.at(i)) + 1) % order.length]));
+  }
+
+  /** The encoded state right after the error stage, with the error panel under it. */
+  errorPanel() {
+    const code = this.code;
+    const encoded = encode(code, State.fromAngle(this.theta));
+    const errIdx = this.stages.findIndex((st) => st.id === 'error');
+    const after = this.compute(errIdx).state.branches(this.ancillas)[0].state;
+    const coherent = this.mode === 'coherent';
+    const c = code.classify(this.err);
+    const syn = coherent ? null : c.syndrome;
+    const meterRow = coherent
+      ? h('div', { class: 'meters', role: 'group', 'aria-label': 'stabilizer expectation values' },
+        code.stabilizers.map((st) => h('div', { class: 'meter' },
+          h('span', { class: 'meter-name' }, st.toLabelled(code.labels)),
+          h('span', { class: 'meter-val' }, fmt(after.expectZ(st.support()))),
+          h('span', { class: 'meter-bit' }, 'expectation'))))
+      : meters(code, syn);
+    const hint = `Click a qubit to cycle ${['no error', ...this.allowed.map((k) => k + (k === 'X' ? ' (bit flip)' : ' (phase flip)'))].join(' → ')}.`;
+    return h('div', { class: 'error-panel' },
+      h('p', { class: 'panel-head' }, h('b', {}, 'Error E and the encoded state after it'), ' ', h('span', { class: 'w-hint' }, hint)),
+      h('div', { class: 'w-row' }, qubitButtons(code, this.err, this.allowed, (i) => this.cycle(i)), meterRow),
+      ampChart(after, this.layout),
+      coherent
+        ? h('p', { class: 'status' }, `The coherent error of eq. 20 on every qubit, p = ${this.p.toFixed(2)}, leaves a superposition over C and the error spaces; each meter shows an expectation value rather than ±1. The syndrome measurement will pick one subspace, with the probabilities shown under the circuit once the ancillas are ready.`)
+        : h('p', { class: `status is-${c.kind}` }, QecStateView.prototype.describe.call(this, c, after, encoded)),
+      !coherent && flag(this, 'decoder') ? QecStateView.prototype.decoderLine.call(this, c, after, encoded) : null,
+      flag(this, 'logical') ? QecStateView.prototype.logicalReadout.call(this, after) : null);
+  }
+
   controls() {
     const measureIdx = this.stages.findIndex((s) => s.id === 'measure');
-    const errButtons = h('div', { class: 'errpick', role: 'group', 'aria-label': 'choose the error E' },
-      h('span', { class: 'errpick-name' }, 'Error E:'),
-      Array.from({ length: this.n }, (_, q) => h('button', { type: 'button', class: `chip${this.mode === 'pauli' && this.err.at(q) === 'X' ? ' on' : ''}`, 'aria-pressed': this.mode === 'pauli' && this.err.at(q) === 'X',
-        onclick: () => { this.mode = 'pauli'; this.err.multiplyAt(q, 'X'); this.outcome = null; if (this.fig) this.fig.broadcast(); else this.render(); } }, `X${subscript(q + 1)}`)),
-      flag(this, 'coherent') ? h('button', { type: 'button', class: `chip${this.mode === 'coherent' ? ' on' : ''}`, 'aria-pressed': this.mode === 'coherent',
-        onclick: () => { this.mode = 'coherent'; this.outcome = null; this.render(); } }, 'coherent (eq. 20)') : null,
-      flag(this, 'coherent') && this.mode === 'coherent' ? slider('p =', { id: `${this.id}-p`, min: 0, max: 0.5, step: 0.01, value: this.p, format: (v) => v.toFixed(2),
-        oninput: (v) => { this.p = v; this.outcome = null; this.render(); } }) : null);
+    const code = this.code;
     return h('div', { class: 'controls stack' },
-      errButtons,
       h('div', { class: 'stepper' },
         h('button', { type: 'button', disabled: this.stage === 0, onclick: () => this.goto(this.stage - 1) }, '← Back'),
         h('span', { class: 'stepper-pos' }, `Stage ${this.stage + 1} of ${this.stages.length}: ${this.stages[this.stage].name}`),
         h('button', { type: 'button', class: 'primary', disabled: this.stage === this.stages.length - 1, onclick: () => this.goto(this.stage + 1) }, this.stage + 1 < this.stages.length ? `Next: ${this.stages[this.stage + 1].name} →` : 'Done'),
         this.stage >= measureIdx ? h('button', { type: 'button', onclick: () => { this.outcome = null; this.stage = measureIdx; this.render(); } }, 'Measure again') : null,
-        h('button', { type: 'button', onclick: () => this.goto(0) }, 'Restart')),
-      slider('input θ =', { id: `${this.id}-theta`, min: 0, max: Math.PI.toFixed(4), step: 0.01, value: this.theta, format: (v) => `${v.toFixed(2)} rad`,
-        oninput: (v) => { this.theta = v; this.outcome = null; this.render(); } }));
+        h('button', { type: 'button', onclick: () => this.goto(0) }, 'Restart')));
+  }
+
+  inputControls() {
+    const code = this.code;
+    return h('div', { class: 'controls' },
+      slider('input |ψ⟩ = cos(θ/2)|0⟩ + sin(θ/2)|1⟩, θ =', { id: `${this.id}-theta`, min: 0, max: Math.PI.toFixed(4), step: 0.01, value: this.theta, format: (v) => `${v.toFixed(2)} rad`,
+        oninput: (v) => { this.theta = v; this.outcome = null; this.render(); } }),
+      h('button', { type: 'button', onclick: () => this.setError((e) => assignPauli(e, Pauli.identity(this.n))) }, 'Clear errors'),
+      flag(this, 'logical') ? ['X', 'Z'].map((op) => h('button', { type: 'button', onclick: () => this.setError((e) => assignPauli(e, e.mul(code.logicals[0][op]))) },
+        `Apply ${op}̄ = ${code.logicals[0][op].toLabelled(code.labels)}`)) : null,
+      flag(this, 'coherent') ? h('button', { type: 'button', class: `chip${this.mode === 'coherent' ? ' on' : ''}`, 'aria-pressed': this.mode === 'coherent',
+        onclick: () => { this.mode = this.mode === 'coherent' ? 'pauli' : 'coherent'; this.outcome = null; this.render(); } }, 'coherent error (eq. 20)') : null,
+      flag(this, 'coherent') && this.mode === 'coherent' ? slider('p =', { id: `${this.id}-p`, min: 0, max: 0.5, step: 0.01, value: this.p, format: (v) => v.toFixed(2),
+        oninput: (v) => { this.p = v; this.outcome = null; this.render(); } }) : null);
   }
 
   render() {
@@ -599,7 +648,9 @@ class QecCircuit extends Base {
       this.circuit(),
       h('p', { class: 'stage-caption' }, h('b', {}, `${this.stages[this.stage].name}. `), this.caption(state, correction)),
       this.outcomes(state),
-      this.controls());
+      this.controls(),
+      this.errorPanel(),
+      this.inputControls());
   }
 }
 

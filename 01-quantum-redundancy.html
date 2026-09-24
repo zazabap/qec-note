@@ -116,16 +116,14 @@ p_L = 3p_X^2(1 - p_X) + p_X^3 = 3p_X^2 - 2p_X^3 ,
 <qec-tabs aria-label="codes">
 <section data-tab="Two-qubit code">
 <qec-figure code="two-qubit" label="A" error="XI" title="The two-qubit detection code">
-  <qec-circuit code="two-qubit" coherent title="Syndrome extraction, gate by gate (paper's figure 2)"></qec-circuit>
-  <qec-state-view code="two-qubit" allowed="X" title="Codespace, error space and the Z₁Z₂ meter"></qec-state-view>
+  <qec-circuit code="two-qubit" coherent allowed="X" title="Circuit, error and subspaces (paper's figure 2)"></qec-circuit>
   <qec-syndrome-table code="two-qubit" errors="X" title="Every bit-flip pattern (paper's table 1)"></qec-syndrome-table>
   <qec-suppression p="0.1" title="Error suppression by detection (eq. 21–24)"></qec-suppression>
 </qec-figure>
 </section>
 <section data-tab="Three-qubit code">
 <qec-figure code="three-qubit" label="B" error="XII" title="The three-qubit code">
-  <qec-circuit code="three-qubit" coherent decoder title="Syndrome extraction and recovery (paper's figure 3)"></qec-circuit>
-  <qec-state-view code="three-qubit" allowed="XZ" decoder logical title="Subspaces, meters, decoder, and the logical Z̄ = Z₁"></qec-state-view>
+  <qec-circuit code="three-qubit" coherent decoder allowed="XZ" logical title="Circuit, error, subspaces and recovery (paper's figure 3)"></qec-circuit>
   <qec-syndrome-table code="three-qubit" errors="X" decoder title="Every bit-flip pattern (paper's table 2)"></qec-syndrome-table>
   <qec-suppression code="three-qubit" p="0.1" title="Error suppression by correction"></qec-suppression>
 </qec-figure>
