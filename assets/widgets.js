@@ -735,6 +735,7 @@ class QecSyndromeTable extends Base {
       if (c.kind === 'identity') return 'nothing to do';
       if (c.kind === 'logical') return `undetected: acts as ${c.action.join(' ')}`;
       if (c.kind === 'stabilizer') return 'undetected, but harmless (a stabilizer)';
+      if (!flag(this, 'decoder')) return 'detected';
       const corr = table.get(r.syndrome);
       const residual = r.error.mul(corr);
       const rc = code.classify(residual);
@@ -758,7 +759,7 @@ class QecSyndromeTable extends Base {
           h('td', { class: 'mono' }, r.label), h('td', { class: 'mono' }, r.weight),
           Array.from(r.syndrome).map((b) => h('td', { class: `mono${b === '1' ? ' lit' : ''}` }, b === '1' ? '−1' : '+1')),
           h('td', { class: 'mono' }, r.syndrome), h('td', {}, verdict(r))))))),
-      h('p', { class: 'w-note' }, `Rows are ordered by weight. The ${m} generator${m > 1 ? 's' : ''} ${code.stabilizers.map((s) => s.toLabelled(code.labels)).join(' and ')} give${m > 1 ? '' : 's'} ${2 ** m} possible syndromes for ${rows.length} error patterns, so some patterns must share a syndrome; the decoder always assumes the lightest one.`,
+      h('p', { class: 'w-note' }, `Rows are ordered by weight. The ${m} generator${m > 1 ? 's' : ''} ${code.stabilizers.map((s) => s.toLabelled(code.labels)).join(' and ')} give${m > 1 ? '' : 's'} ${2 ** m} possible syndromes for ${rows.length} error patterns, so some patterns must share a syndrome${flag(this, 'decoder') ? '; the decoder always assumes the lightest one' : ''}.`,
         this.fig ? ' Click a row to apply that error in the other parts.' : ''));
     this.highlight();
   }
@@ -786,9 +787,48 @@ class QecFigure extends Base {
   }
 }
 
+/* ------------------------------------------------------- <qec-tabs> */
+
+/**
+ * <qec-tabs><section data-tab="Two-qubit code">…</section>…</qec-tabs>
+ * One tab per child section; inactive panels are hidden, not removed, so the
+ * widgets inside keep their state when you switch back.
+ */
+class QecTabs extends Base {
+  connectedCallback() {
+    if (this.dataset.ready) return;
+    this.dataset.ready = '1';
+    this.classList.add('qec-tabs');
+    const panels = [...this.children].filter((c) => c.dataset.tab);
+    const base = this.id || nextId('tabs');
+    const buttons = panels.map((panel, i) => {
+      panel.id ||= `${base}-panel-${i}`;
+      panel.setAttribute('role', 'tabpanel');
+      const b = h('button', { type: 'button', role: 'tab', id: `${base}-tab-${i}`, 'aria-controls': panel.id,
+        onclick: () => this.select(i),
+        onkeydown: (e) => {
+          const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+          if (d) { e.preventDefault(); const j = (i + d + panels.length) % panels.length; this.select(j); this.buttons[j].focus(); }
+        } }, panel.dataset.tab);
+      panel.setAttribute('aria-labelledby', b.id);
+      return b;
+    });
+    this.panels = panels;
+    this.buttons = buttons;
+    this.prepend(h('div', { class: 'tablist', role: 'tablist', 'aria-label': attr(this, 'aria-label', 'figures') }, buttons));
+    this.select(0);
+  }
+
+  select(i) {
+    this.panels.forEach((p, k) => { p.hidden = k !== i; });
+    this.buttons.forEach((b, k) => { b.setAttribute('aria-selected', String(k === i)); b.tabIndex = k === i ? 0 : -1; });
+  }
+}
+
 /* ---------------------------------------------------------- register */
 
 export const components = {
+  'qec-tabs': QecTabs,
   'qec-figure': QecFigure,
   'qec-state-view': QecStateView,
   'qec-circuit': QecCircuit,

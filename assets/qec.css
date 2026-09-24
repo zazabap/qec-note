@@ -183,6 +183,15 @@ summary { cursor: pointer; color: var(--muted); }
 .tip b { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .readout-line { margin: 0.5rem 0; }
 
+/* tabs holding the figures */
+.qec-tabs { display: block; margin: 1rem 0 2rem; }
+.tablist { display: flex; gap: 0; border-bottom: 1px solid var(--ink); font-family: var(--sans); }
+.tablist button { font: inherit; font-size: 0.95rem; padding: 0.45rem 1rem; border: 1px solid transparent; border-bottom: 0; border-radius: 4px 4px 0 0; background: none; color: var(--muted); cursor: pointer; margin-bottom: -1px; }
+.tablist button[aria-selected="true"] { color: var(--ink); font-weight: 650; border-color: var(--ink); background: var(--paper); }
+.tablist button:hover { color: var(--ink); }
+.tablist button:focus-visible { outline: 2px solid var(--z); outline-offset: 2px; }
+.qec-tabs > section > .qec-figure:first-child { border-top: 0; margin-top: 0.4rem; }
+
 /* a figure with several parts sharing one error */
 .qec-figure { display: block; margin: 1.75rem 0 2rem; padding: 0.9rem 0 0.4rem; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule); font-family: var(--sans); font-size: 0.92rem; line-height: 1.45; }
 .qec-figure .qec-widget { margin: 0.9rem 0 0; padding: 0.8rem 0 1rem; border-top: 1px solid var(--rule); border-bottom: 0; }
