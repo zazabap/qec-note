@@ -39,7 +39,7 @@ window.MathJax = {
   <span class="right"><a href="https://zazabap.github.io">zazabap.github.io</a></span>
 </nav>
 <main>
-<p class="crumbs">Notes on quantum error correction · Part 3 · follows Roffe, sections 4.5 and 4.6 · previous: <a href="02-stabilizer-formalism.html">Part 2</a></p>
+<p class="crumbs">Notes on quantum error correction · Part 3 · follows Roffe, sections 4.5 and 4.6 · previous: <a href="02-stabilizer-formalism.html">Part 2</a> · next: <a href="04-css-codes.html">Part 4</a></p>
 <h1>Correcting errors: the Shor code</h1>
 <p class="lead">A stabilizer code with distance three or more can undo errors, not just flag them. This part sets out what a successful recovery means, why several errors may share a syndrome without harm, and builds Shor's nine-qubit code, the first code to correct any single-qubit error. It uses the stabilizer language of <a href="02-stabilizer-formalism.html">part 2</a>. The <a href="#figures">interactive figure</a> is at the end.</p>
 
@@ -77,7 +77,7 @@ RE\ket\psi_\L = \bar L\ket\psi_\L
 <aside class="note">
 <p><strong>A caveat on eq. 34</strong> (encoding by projection, <a href="02-stabilizer-formalism.html">part 2</a>). Projecting onto the stabilizers fixes the codespace but not the logical value. It returns \(\ket0_\L\) only when \(\ket{0^{\otimes n}}\) is already a \(+1\) eigenstate of every \(\bar Z_i\), which holds when the \(\bar Z_i\) are made of \(Z\) operators, as for the \([[4,2,2]]\) code. For the Shor code with the codewords of eq. 43, \(\bar Z = X_1X_2X_3\), and eq. 34 gives \(\ket+_\L = (\ket0_\L + \ket1_\L)/\sqrt2\). Adding the projector \((\I + \bar Z)\) repairs it; the projection part of the figure below shows both steps.</p>
 </aside>
-<p>From here the paper turns to the surface code. These notes take a detour first: CSS codes, of which Shor's code is one, since its generators are each made of only \(X\)s or only \(Z\)s.</p>
+<p>From here the paper turns to the surface code. These notes take a detour first: <a href="04-css-codes.html">CSS codes</a>, of which Shor's code is one, since its generators are each made of only \(X\)s or only \(Z\)s.</p>
 
 <h2 id="figures">Interactive figure</h2>
 <p>Part A.1 runs one full correction cycle of the paper's figure 6 on the Shor code: the encoder of eq. 41–43, the error, eight stabilizer measurements with one ancilla each, and the lookup-table recovery. It simulates all 17 qubits. Click a qubit to cycle through \(X\), \(Z\) and \(Y\) errors, or click a table row; the parts share one error. As in <a href="02-stabilizer-formalism.html">part 2</a>, the bars are drawn in the code's logical basis, in \(\C\) and in the error space \(R\cdot\C\) the syndrome points to. For a degenerate pair such as \(Z_1\) and \(Z_2\) the bars are the same, which is why one recovery serves both. The figure opens with \(Z_2\) applied.</p>

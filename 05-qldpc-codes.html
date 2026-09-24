@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quantum LDPC Codes</title>
+<meta name="description" content="Quantum low-density parity-check codes: why sparse checks matter, the hypergraph product, and belief-propagation decoding and its failures, with an interactive hypergraph-product lattice. Part 5 of a set of notes on quantum error correction.">
+<link rel="stylesheet" href="assets/qec.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    tags: 'none',
+    macros: {
+      ket: ['\\left|#1\\right\\rangle', 1],
+      bra: ['\\left\\langle#1\\right|', 1],
+      L: '\\mathrm{L}',
+      I: '\\mathbb{1}',
+      C: '\\mathcal{C}',
+      F: '\\mathcal{F}',
+      H: '\\mathcal{H}',
+      span: '\\operatorname{span}'
+    }
+  },
+  svg: { fontCache: 'global' },
+  options: { ignoreHtmlClass: 'qec-widget', skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+<script type="module" src="assets/widgets.js"></script>
+</head>
+<body>
+<div class="wrap">
+<nav class="top" aria-label="site">
+  <a href="index.html">Contents</a>
+  <a href="https://arxiv.org/abs/1907.11157">Roffe (2019)</a>
+  <a href="https://github.com/zazabap/qec-note">Source</a>
+  <span class="right"><a href="https://zazabap.github.io">zazabap.github.io</a></span>
+</nav>
+<main>
+<p class="crumbs">Notes on quantum error correction · Part 5 · beyond Roffe's guide · previous: <a href="04-css-codes.html">Part 4</a></p>
+<h1>Quantum LDPC codes</h1>
+<p class="lead">A code is low-density parity-check (LDPC) when every check touches only a few qubits and every qubit sits in only a few checks, however large the code grows. The surface code is one, but it encodes a single qubit. This part asks how to keep the checks small while encoding many qubits, builds the simplest general answer, the hypergraph product, and decodes it with belief propagation. The <a href="#figures">interactive figure</a> is at the end, followed by <a href="#references">references</a>.</p>
+
+<h2>What LDPC buys, and what it costs</h2>
+<p>A family of CSS codes is LDPC if the rows and columns of \(H_X\) and \(H_Z\) have weight at most some constant \(w\) independent of \(n\). Each stabilizer measurement then touches at most \(w\) qubits, syndrome extraction runs in constant depth, and an error on one ancilla spreads to few data qubits. Classically, LDPC codes decoded by belief propagation come close to the channel capacity (Gallager 1962), which is why they are in every modern communication standard.</p>
+<p>The surface code is LDPC with \(w = 4\) but has \(k = 1\) and \(d \sim \sqrt n\). That is not an accident of design: any stabilizer code whose checks are local on a two-dimensional lattice obeys \(k d^2 = O(n)\) (Bravyi, Poulin and Terhal 2010). Encoding many qubits at large distance with small checks therefore requires checks that are not local in the plane, and a construction that controls both \(k\) and \(d\).</p>
+
+<h2>Why not take two classical LDPC codes?</h2>
+<p>Part 4 builds a CSS code from any \(H_X, H_Z\) with \(H_X H_Z^{\mathsf T} = 0\). Two independently chosen sparse matrices almost never satisfy that, and choosing \(H_X = H_Z = H\) with \(H H^{\mathsf T} = 0\) forces the classical code to contain its own dual, which for sparse \(H\) puts low-weight words among the logical operators. Early constructions such as the bicycle codes of MacKay, Mitchison and McFadden (2004) designed matrices around this condition. The hypergraph product meets it by construction.</p>
+
+<h2>The hypergraph product</h2>
+<p>Given two classical codes with parity-check matrices \(H_1\) (\(m_1 \times n_1\)) and \(H_2\) (\(m_2 \times n_2\)), Tillich and Zémor define</p>
+\[
+H_X = \bigl(\, H_1 \otimes I_{n_2} \;\big|\; I_{m_1} \otimes H_2^{\mathsf T} \,\bigr), \qquad
+H_Z = \bigl(\, I_{n_1} \otimes H_2 \;\big|\; H_1^{\mathsf T} \otimes I_{m_2} \,\bigr).
+\]
+<p>Then \(H_X H_Z^{\mathsf T} = H_1 \otimes H_2^{\mathsf T} + H_1 \otimes H_2^{\mathsf T} = 0\) over \(\mathbb F_2\), whatever \(H_1\) and \(H_2\) are. The qubits come in two blocks, one for each pair (bit of code 1, bit of code 2) and one for each pair (check of code 1, check of code 2), and the parameters are</p>
+\[
+n = n_1 n_2 + m_1 m_2, \qquad
+k = k_1 k_2 + k_1^{\mathsf T} k_2^{\mathsf T}, \qquad
+d = \min\bigl(d_1, d_2, d_1^{\mathsf T}, d_2^{\mathsf T}\bigr),
+\]
+<p>where \(k_i^{\mathsf T}\) and \(d_i^{\mathsf T}\) belong to the transposed code \(\ker H_i^{\mathsf T}\) (a distance counts as \(\infty\) when that code is empty). An X check has weight equal to a row weight of \(H_1\) plus a column weight of \(H_2\), so sparse inputs give a sparse output. The product of two repetition codes is exactly the planar surface code, and the product of two cyclic repetition codes is Kitaev's toric code. Feeding in classical LDPC codes with \(k, d \propto n\) gives \(k \propto N\) and \(d \propto \sqrt N\) in the number of qubits \(N\): constant rate, at the surface code's distance scaling.</p>
+
+<div class="scroll"><table class="tbl">
+<thead><tr><th>code</th><th>\([[n,k,d]]\)</th><th>rate \(k/n\)</th><th>largest check weight</th><th>largest qubit degree</th></tr></thead>
+<tbody>
+<tr><td>HGP(rep 3, rep 3): surface code</td><td class="mono">[[13, 1, 3]]</td><td class="mono">0.077</td><td class="mono">4</td><td class="mono">4</td></tr>
+<tr><td>HGP(rep 5, rep 5): surface code</td><td class="mono">[[41, 1, 5]]</td><td class="mono">0.024</td><td class="mono">4</td><td class="mono">4</td></tr>
+<tr><td>HGP(ring 4, ring 4): toric code</td><td class="mono">[[32, 2, 4]]</td><td class="mono">0.063</td><td class="mono">4</td><td class="mono">4</td></tr>
+<tr><td>HGP(Hamming, rep 3)</td><td class="mono">[[27, 4, 3]]</td><td class="mono">0.148</td><td class="mono">6</td><td class="mono">6</td></tr>
+<tr><td>HGP(Hamming, Hamming)</td><td class="mono">[[58, 16, 3]]</td><td class="mono">0.276</td><td class="mono">7</td><td class="mono">8</td></tr>
+<tr><td>Bivariate bicycle code (Bravyi et al. 2024)</td><td class="mono">[[144, 12, 12]]</td><td class="mono">0.083</td><td class="mono">6</td><td class="mono">6</td></tr>
+</tbody></table></div>
+<p>All rows except the last are computed by these notes' own code; the product distances are checked by exhaustive search where the code is small enough. For comparison, twelve logical qubits at distance 12 in the planar surface code of Roffe's section 5 take twelve patches of \(12^2 + 11^2 = 265\) data qubits, 3,180 in all, against 144 for the bivariate bicycle code.</p>
+
+<h2>Beyond the hypergraph product</h2>
+<p>The \(\sqrt N\) distance of the hypergraph product was a barrier for a decade. Lifted-product and related constructions, which replace the entries of the matrices by elements of a group algebra, removed it: Panteleev and Kalachev (2022) gave families with \(k \propto N\) and \(d \propto N\), asymptotically good quantum LDPC codes. On the practical side, codes with constant rate reduce the overhead of fault tolerance to a constant factor (Gottesman 2013), and small quasi-cyclic codes such as the bivariate bicycle codes are designed for hardware with a few long-range couplers per qubit. Breuckmann and Eberhardt's review covers these constructions.</p>
+
+<h2>Decoding with belief propagation</h2>
+<p>By part 4, decoding \(X\) errors means solving \(H_Z \hat e = s_Z\) for a likely \(\hat e\), a classical problem on the Tanner graph of \(H_Z\) (qubits on one side, checks on the other). Belief propagation passes log-likelihood ratios along its edges. Each qubit starts from \(L_0 = \ln\frac{1-p}{p}\). In the min-sum form used in the figure, a check \(c\) with syndrome bit \(s_c\) tells each neighbour \(v\)</p>
+\[
+r_{c\to v} = (-1)^{s_c}\,\alpha \prod_{v' \in N(c)\setminus v} \operatorname{sgn} q_{v'\to c} \;\min_{v' \in N(c)\setminus v} |q_{v'\to c}| ,
+\]
+<p>each qubit sums what it hears,</p>
+\[
+L_v = L_0 + \sum_{c \in N(v)} r_{c\to v}, \qquad q_{v\to c} = L_v - r_{c\to v},
+\]
+<p>and the hard decision \(\hat e_v = [L_v < 0]\) is checked against the syndrome after every round, stopping when \(H_Z \hat e = s_Z\). The figure uses \(\alpha = 0.75\) and at most 30 rounds. Classically this is fast and near-optimal on sparse graphs. On quantum codes it runs into two problems, both visible in the figure.</p>
+<ul>
+<li><strong>Degeneracy.</strong> Errors that differ by a stabilizer are equally good answers, so the beliefs can split evenly between them and never settle. On the distance-5 surface code, HGP(rep 5, rep 5), BP decodes every single \(X\) error, yet 146 of the 820 two-qubit \(X\) errors, which the code can correct, leave it without a syndrome-matching answer after 30 rounds; \(X\) on qubits 1 and 2 is one.</li>
+<li><strong>BP is not a minimum-weight decoder.</strong> It stops at the first hard decision that matches the syndrome. On HGP(Hamming, Hamming), 7 of the 58 single \(X\) errors are decoded wrongly: \(X\) on qubit 7 violates three checks, after one round qubits 3, 5, 6 and 7 all look flipped, their syndrome happens to match, and the weight-four guess differs from the truth by a logical operator.</li>
+</ul>
+<p>The standard remedy is BP followed by ordered-statistics decoding (BP+OSD): when BP fails, its soft output ranks the qubits by how likely they are to be flipped, and Gaussian elimination solves \(H \hat e = s\) using the most likely qubits first. Panteleev and Kalachev introduced it for quantum LDPC codes, and Roffe and coauthors benchmarked it across code families with an open-source implementation.</p>
+
+<h2 id="figures">Interactive figure</h2>
+<p>Choose two classical codes; the figure lays out their hypergraph product on a grid whose rows follow code 1 (bits and checks) and whose columns follow code 2. Bit-bit and check-check positions hold qubits, check-bit positions hold X checks, bit-check positions hold Z checks. For two repetition codes this is the surface-code lattice; for the Hamming code the checks reach across the grid, which a hover over a square shows. Click qubits to place errors, or sample them at rate \(p\), then decode with BP and scrub through the iterations: the rings show each qubit's belief that it carries an \(X\) (inner) or \(Z\) (outer) error. To reproduce the failures above, choose rep 5 for both codes and put \(X\) on qubits 1 and 2, or Hamming for both and put \(X\) on qubit 7.</p>
+<qec-hgp label="A" a="rep3" b="rep3" codes="rep3,rep4,rep5,ring3,ring4,hamming7" title="Hypergraph product codes and belief propagation"></qec-hgp>
+
+<h2 id="references">References</h2>
+<ol class="refs">
+<li>N. P. Breuckmann and J. N. Eberhardt, “Quantum low-density parity-check codes”, <em>PRX Quantum</em> <b>2</b>, 040101 (2021). <a href="https://arxiv.org/abs/2103.06309">arXiv:2103.06309</a> · <a href="https://doi.org/10.1103/PRXQuantum.2.040101">doi</a><span class="why">The best entry point: a review of quantum LDPC constructions, their parameters and decoders.</span></li>
+<li>J.-P. Tillich and G. Zémor, “Quantum LDPC codes with positive rate and minimum distance proportional to the square root of the blocklength”, <em>IEEE Trans. Inf. Theory</em> <b>60</b>, 1193 (2014). <a href="https://arxiv.org/abs/0903.0566">arXiv:0903.0566</a> · <a href="https://doi.org/10.1109/TIT.2013.2292061">doi</a><span class="why">The hypergraph product and its parameters.</span></li>
+<li>D. J. C. MacKay, G. Mitchison and P. L. McFadden, “Sparse-graph codes for quantum error correction”, <em>IEEE Trans. Inf. Theory</em> <b>50</b>, 2315 (2004). <a href="https://arxiv.org/abs/quant-ph/0304161">arXiv:quant-ph/0304161</a> · <a href="https://doi.org/10.1109/TIT.2004.834737">doi</a><span class="why">Early sparse-graph quantum codes, and why the commutation condition makes them hard to design.</span></li>
+<li>S. Bravyi, D. Poulin and B. Terhal, “Tradeoffs for reliable quantum information storage in 2D systems”, <em>Phys. Rev. Lett.</em> <b>104</b>, 050503 (2010). <a href="https://arxiv.org/abs/0909.5200">arXiv:0909.5200</a><span class="why">The bound k d² = O(n) for codes with local checks in two dimensions.</span></li>
+<li>A. Yu. Kitaev, “Fault-tolerant quantum computation by anyons”, <em>Ann. Phys.</em> <b>303</b>, 2 (2003). <a href="https://arxiv.org/abs/quant-ph/9707021">arXiv:quant-ph/9707021</a> · <a href="https://doi.org/10.1016/S0003-4916(02)00018-0">doi</a><span class="why">The toric code, the hypergraph product of two cyclic repetition codes.</span></li>
+<li>R. G. Gallager, “Low-density parity-check codes”, <em>IRE Trans. Inf. Theory</em> <b>8</b>, 21 (1962). <a href="https://doi.org/10.1109/TIT.1962.1057683">doi</a><span class="why">Classical LDPC codes and iterative decoding.</span></li>
+<li>D. Gottesman, “Fault-tolerant quantum computation with constant overhead”, preprint (2013). <a href="https://arxiv.org/abs/1310.2984">arXiv:1310.2984</a><span class="why">Why constant-rate LDPC codes make fault tolerance cheap.</span></li>
+<li>P. Panteleev and G. Kalachev, “Degenerate quantum LDPC codes with good finite length performance”, <em>Quantum</em> <b>5</b>, 585 (2021). <a href="https://arxiv.org/abs/1904.02703">arXiv:1904.02703</a> · <a href="https://doi.org/10.22331/q-2021-11-22-585">doi</a><span class="why">BP+OSD decoding for quantum LDPC codes.</span></li>
+<li>J. Roffe, D. R. White, S. Burton and E. T. Campbell, “Decoding across the quantum low-density parity-check code landscape”, <em>Phys. Rev. Research</em> <b>2</b>, 043423 (2020). <a href="https://arxiv.org/abs/2005.07016">arXiv:2005.07016</a> · <a href="https://doi.org/10.1103/PhysRevResearch.2.043423">doi</a> · software: <a href="https://github.com/quantumgizmos/ldpc">github.com/quantumgizmos/ldpc</a><span class="why">A benchmark of BP+OSD across hypergraph-product and other codes, with software.</span></li>
+<li>P. Panteleev and G. Kalachev, “Asymptotically good quantum and locally testable classical LDPC codes”, in <em>Proc. 54th ACM STOC</em> (2022). <a href="https://arxiv.org/abs/2111.03654">arXiv:2111.03654</a><span class="why">The first asymptotically good quantum LDPC codes.</span></li>
+<li>S. Bravyi, A. W. Cross, J. M. Gambetta, D. Maslov, P. Rall and T. J. Yoder, “High-threshold and low-overhead fault-tolerant quantum memory”, <em>Nature</em> <b>627</b>, 778 (2024). <a href="https://arxiv.org/abs/2308.07915">arXiv:2308.07915</a> · <a href="https://doi.org/10.1038/s41586-024-07107-7">doi</a><span class="why">The [[144,12,12]] bivariate bicycle code and its syndrome circuits.</span></li>
+</ol>
+</main>
+<footer>
+<p>Part 5 of <a href="index.html">Notes on quantum error correction</a>, by Shiwen An. The construction goes beyond Joschka Roffe, <em>Quantum error correction: an introductory guide</em>, <a href="https://arxiv.org/abs/1907.11157">arXiv:1907.11157</a>, which parts 1 to 3 follow; see the references above. The text, figures and code here are original. Text under CC BY 4.0, code under the MIT licence. Revised 24 September 2026.</p>
+</footer>
+</div>
+</body>
+</html>

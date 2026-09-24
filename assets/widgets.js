@@ -10,7 +10,9 @@
 // state.js (amplitudes); this file only draws.
 
 import { Pauli, subscript } from './pauli.js';
-import { getCode } from './codes.js';
+import { getCode, classical, cssCode, CLASSICAL } from './codes.js';
+import * as gf2 from './gf2.js';
+import { minSumBP, flipProbability } from './bp.js';
 import { State, encode, encodeInputs, codewords, subspaces, logicalBasis, encodeLogical } from './state.js';
 
 export { Pauli, getCode, State };
@@ -64,7 +66,7 @@ const pct = (v) => `${(100 * v).toFixed(1)}%`;
 /** Default input: α = 0.8, β = 0.6, so the two amplitudes are easy to tell apart. */
 const DEFAULT_THETA = 2 * Math.atan2(0.6, 0.8);
 
-const WIDGET_TAGS = 'qec-state-view, qec-code-view, qec-projection, qec-circuit, qec-suppression, qec-syndrome-table';
+const WIDGET_TAGS = 'qec-state-view, qec-code-view, qec-projection, qec-circuit, qec-suppression, qec-syndrome-table, qec-checks, qec-css-builder, qec-hgp';
 
 /** Mark the host as a widget (styling, and MathJax leaves it alone). */
 function setup(el) {
@@ -105,9 +107,27 @@ function assignPauli(target, source) {
   target.z.set(source.z);
 }
 
-function slider(labelText, { min, max, step, value, format, oninput, id }) {
+/**
+ * A labelled range input. Most callbacks rebuild the widget, which would
+ * replace the input under the pointer and end a drag, so by default a drag
+ * only updates the readout and commits on release; keyboard steps commit at
+ * once and keep focus. Pass `live: true` when the callback leaves the input
+ * in place.
+ */
+function slider(labelText, { min, max, step, value, format, oninput, id, live = false }) {
   const out = h('output', { for: id }, format(value));
-  const input = h('input', { type: 'range', id, min, max, step, value, oninput: (e) => { const v = Number(e.target.value); out.textContent = format(v); oninput(v); } });
+  let dragging = false, last = Number(value);
+  const commit = (v, el) => {
+    if (v === last) return;
+    last = v;
+    const hadFocus = typeof document !== 'undefined' && document.activeElement === el;
+    oninput(v);
+    if (hadFocus && !live) { const again = document.getElementById(id); if (again && again !== el) again.focus(); }
+  };
+  const input = h('input', { type: 'range', id, min, max, step, value,
+    onpointerdown: () => { dragging = true; window.addEventListener('pointerup', () => { dragging = false; }, { once: true }); },
+    oninput: (e) => { const v = Number(e.target.value); out.textContent = format(v); if (live || !dragging) commit(v, e.target); },
+    onchange: (e) => { dragging = false; commit(Number(e.target.value), e.target); } });
   return h('label', { class: 'slider', for: id }, h('span', { class: 'slider-name' }, labelText), input, out);
 }
 
@@ -819,7 +839,7 @@ class QecSuppression extends Base {
 
     this.replaceChildren(
       header(this, title, 'Move the slider, or hover the plot.'),
-      slider('p =', { id: `${this.id}-p`, min: 0, max: 0.5, step: 0.005, value: this.p, format: (v) => v.toFixed(3), oninput: (v) => { this.p = v; this.update(); } }),
+      slider('p =', { id: `${this.id}-p`, min: 0, max: 0.5, step: 0.005, value: this.p, live: true, format: (v) => v.toFixed(3), oninput: (v) => { this.p = v; this.update(); } }),
       h('div', { class: 'scroll' }, h('table', { class: 'w-table terms' },
         h('thead', {}, h('tr', {}, h('th', {}, `term of ${factors}${this.correct ? '' : ' (eq. 21)'}`), h('th', {}, 'coefficient'), h('th', {}, 'value'), h('th', {}, 'syndrome'), h('th', {}, 'effect on |ψ⟩ᴸ'))),
         this.terms)),
@@ -1238,6 +1258,369 @@ class QecProjection extends Base {
   }
 }
 
+/* ---------------------------------------------------- CSS helpers */
+
+/** X-type and Z-type check matrices of a code whose generators are each pure X or pure Z. */
+function cssMatrices(code) {
+  if (code.extra.HX) return { HX: code.extra.HX, HZ: code.extra.HZ };
+  const HX = [], HZ = [];
+  for (const g of code.stabilizers) {
+    const hasX = g.x.some((b) => b), hasZ = g.z.some((b) => b);
+    if (hasX && hasZ) throw new Error(`${code.name} is not a CSS code`);
+    (hasX ? HX : HZ).push(Uint8Array.from(hasX ? g.x : g.z));
+  }
+  return { HX, HZ };
+}
+
+/** A small 0/1 matrix as a table; `hitCols` marks columns carrying an error, `lit` the rows with syndrome 1. */
+function matrixTable(A, { kind, colLabels, rowLabels, hitCols = [], lit = [], syndrome = null, caption }) {
+  const n = A.length ? A[0].length : colLabels.length;
+  return h('div', { class: 'scroll' }, h('table', { class: `pcm pcm-${kind}` },
+    caption ? h('caption', {}, caption) : null,
+    h('thead', {}, h('tr', {}, h('th', {}, ''), colLabels.map((l, j) => h('th', { class: hitCols.includes(j) ? 'hit' : '' }, l)), syndrome ? h('th', { class: 'syn' }, 's') : null)),
+    h('tbody', {}, A.map((row, i) => h('tr', { class: lit[i] ? 'lit' : '' },
+      h('th', {}, rowLabels[i]),
+      Array.from({ length: n }, (_, j) => h('td', { class: `${row[j] ? 'one' : ''}${row[j] && hitCols.includes(j) ? ' hit' : ''}` }, row[j] ? '1' : '·')),
+      syndrome ? h('td', { class: 'syn mono' }, String(syndrome[i])) : null)))));
+}
+
+/* ------------------------------------------------------ <qec-checks> */
+
+/**
+ * A CSS code as two parity-check matrices. Click a qubit to cycle X, Z, Y;
+ * X errors light rows of H_Z, Z errors light rows of H_X, and the decoder
+ * treats the two halves as separate classical problems.
+ */
+class QecChecks extends Base {
+  connectedCallback() {
+    if (this.dataset.ready) return;
+    this.dataset.ready = '1';
+    setup(this);
+    this.options = attr(this, 'codes', attr(this, 'code', 'steane')).split(',');
+    this.allowed = kinds(attr(this, 'allowed', 'XZY'));
+    this.id ||= nextId('ck');
+    this.setCode(this.options[0], attr(this, 'initial'));
+  }
+
+  setCode(name, initial) {
+    this.name = name;
+    this.code = getCode(name);
+    ({ HX: this.HX, HZ: this.HZ } = cssMatrices(this.code));
+    this.err = initial ? Pauli.fromString(initial, this.code.n) : Pauli.identity(this.code.n);
+    this.render();
+  }
+
+  cycle(i) {
+    const order = ['I', ...this.allowed];
+    this.err.set(i, order[(order.indexOf(this.err.at(i)) + 1) % order.length]);
+    this.render(i);
+  }
+
+  /** Match a syndrome to a single column of H; returns the column index or -1. */
+  static column(H, s) {
+    const n = H.length ? H[0].length : 0;
+    for (let j = 0; j < n; j++) if (H.every((row, i) => row[j] === s[i])) return j;
+    return -1;
+  }
+
+  decoderLines(sX, sZ) {
+    const code = this.code, L = code.labels;
+    const zero = (s) => s.every((b) => b === 0);
+    const corr = Pauli.identity(code.n);
+    const lines = [];
+    const half = (s, H, kind, checks) => {
+      const bits = Array.from(s).join('');
+      if (zero(s)) { lines.push(`${kind} errors: ${checks} syndrome ${bits || '—'}, nothing to do.`); return; }
+      const n = H[0].length;
+      const matches = [];
+      for (let q = 0; q < n; q++) if (H.every((row, i) => row[q] === s[i])) matches.push(q);
+      if (!matches.length) { lines.push(`${kind} errors: ${checks} syndrome ${bits} is not a column of the matrix, so no single ${kind} explains it; the decoder leaves it.`); return; }
+      const j = matches[0];
+      corr.multiplyAt(j, kind);
+      if (matches.length > 1) { lines.push(`${kind} errors: ${checks} syndrome ${bits} equals columns ${matches.map((q) => q + 1).join(', ')}: a single ${kind} on any of them fits, and nothing says which. Guessing ${kind}${subscript(j + 1)}.`); return; }
+      const binary = this.name === 'steane' ? ` Read as a binary number, ${bits} = ${j + 1}: the Hamming code names the qubit.` : '';
+      lines.push(`${kind} errors: ${checks} syndrome ${bits} equals column ${j + 1} of the matrix, so apply ${kind}${subscript(j + 1)}.${binary}`);
+    };
+    half(sZ, this.HZ, 'X', 'H_Z');
+    half(sX, this.HX, 'Z', 'H_X');
+    const r = code.classify(this.err.mul(corr));
+    const ok = r.kind === 'identity' || r.kind === 'stabilizer';
+    return h('div', { class: `decoder ${ok ? 'ok' : 'fail'}` },
+      lines.map((l) => h('p', { class: 'dec-line' }, l)),
+      h('p', { class: 'dec-line' }, h('b', {}, corr.isIdentity() && this.err.isIdentity() ? 'Nothing to correct.' : ok
+        ? `Net effect ${this.err.mul(corr).toLabelled(L)}${r.kind === 'stabilizer' ? ', a stabilizer' : ''}: recovered.`
+        : `Net effect ${this.err.mul(corr).toLabelled(L)}: a logical ${r.action.join(' ')}. The decoder failed.`)));
+  }
+
+  render(focusIndex) {
+    const code = this.code, n = code.n, L = code.labels;
+    const eX = Uint8Array.from(this.err.x), eZ = Uint8Array.from(this.err.z);
+    const sX = gf2.mulVec(this.HX, eZ), sZ = gf2.mulVec(this.HZ, eX);
+    const colLabels = Array.from({ length: n }, (_, j) => String(j + 1));
+    const c = code.classify(this.err);
+    const hitsZ = [], hitsX = [];
+    for (let j = 0; j < n; j++) { if (eZ[j]) hitsZ.push(j); if (eX[j]) hitsX.push(j); }
+    const logicals = code.logicals.map((l, j) => { const sub = code.logicals.length > 1 ? subscript(j + 1) : ''; return `X̄${sub} = ${l.X.toLabelled(L)}, Z̄${sub} = ${l.Z.toLabelled(L)}`; }).join('; ');
+    this.replaceChildren(
+      header(this, 'Parity checks of a CSS code', `Click a qubit to cycle ${['no error', ...this.allowed].join(' → ')}.`),
+      this.options.length > 1 ? h('label', { class: 'pick', for: `${this.id}-code` }, 'Code: ',
+        h('select', { id: `${this.id}-code`, onchange: (e) => this.setCode(e.target.value) },
+          this.options.map((o) => h('option', { value: o, selected: o === this.name }, getCode(o).name)))) : null,
+      h('p', { class: 'w-meta' }, h('span', { class: 'mono' }, code.params()), ` · ${this.HX.length} X-type and ${this.HZ.length} Z-type checks · ${logicals}`),
+      qubitButtons(code, this.err, this.allowed, (i) => this.cycle(i)),
+      h('div', { class: 'pcm-pair' },
+        matrixTable(this.HX, { kind: 'x', colLabels, rowLabels: this.HX.map((_, i) => `X${subscript(i + 1)}`), hitCols: hitsZ, lit: sX, syndrome: sX,
+          caption: 'H_X: X-type checks, lit by Z errors' }),
+        matrixTable(this.HZ, { kind: 'z', colLabels, rowLabels: this.HZ.map((_, i) => `Z${subscript(i + 1)}`), hitCols: hitsX, lit: sZ, syndrome: sZ,
+          caption: 'H_Z: Z-type checks, lit by X errors' })),
+      h('p', { class: `status is-${c.kind}` }, c.kind === 'identity' ? 'No error.'
+        : c.kind === 'detectable' ? `${this.err.toLabelled(L)}: the X part (${hitsX.map((j) => j + 1).join(', ') || 'none'}) gives s_Z = H_Z e_X = ${Array.from(sZ).join('')}, the Z part (${hitsZ.map((j) => j + 1).join(', ') || 'none'}) gives s_X = H_X e_Z = ${Array.from(sX).join('')}.`
+          : c.kind === 'stabilizer' ? `${this.err.toLabelled(L)} is a stabilizer: every check is satisfied and nothing has happened.`
+            : `${this.err.toLabelled(L)} satisfies every check but acts as ${c.action.join(' ')}: an undetected logical error.`),
+      flag(this, 'decoder') ? this.decoderLines(sX, sZ) : null,
+      h('div', { class: 'controls' },
+        h('button', { type: 'button', onclick: () => { this.err = Pauli.identity(n); this.render(); } }, 'Clear errors'),
+        code.logicals.flatMap((l, j) => ['X', 'Z'].map((op) => h('button', { type: 'button', onclick: () => { this.err = this.err.mul(l[op]); this.render(); } },
+          `Apply ${op}̄${code.logicals.length > 1 ? subscript(j + 1) : ''}`)))));
+    if (focusIndex !== undefined) this.querySelector(`.qubit[data-i="${focusIndex}"]`)?.focus();
+  }
+}
+
+/* ------------------------------------------------- <qec-css-builder> */
+
+class QecCssBuilder extends Base {
+  connectedCallback() {
+    if (this.dataset.ready) return;
+    this.dataset.ready = '1';
+    setup(this);
+    this.keys = attr(this, 'codes', 'hamming7,simplex7,even7,rep7').split(',');
+    this.kx = attr(this, 'x', this.keys[0]);
+    this.kz = attr(this, 'z', this.keys[0]);
+    this.id ||= nextId('cb');
+    this.render();
+  }
+
+  pick(which, label) {
+    const id = `${this.id}-${which}`;
+    return h('label', { class: 'pick', for: id }, label,
+      h('select', { id, onchange: (e) => { this[which] = e.target.value; this.render(); } },
+        this.keys.map((k) => h('option', { value: k, selected: k === this[which] }, classical(k).name))));
+  }
+
+  render() {
+    const cx = classical(this.kx), cz = classical(this.kz);
+    const HX = cx.H, HZ = cz.H, n = cx.n;
+    const P = gf2.mul(HX, gf2.transpose(HZ, n));
+    const ok = gf2.isZero(P);
+    const colLabels = Array.from({ length: n }, (_, j) => String(j + 1));
+    const bad = [];
+    P.forEach((row, i) => row.forEach((b, j) => { if (b) bad.push([i, j]); }));
+    let verdict;
+    if (ok) {
+      const rx = gf2.rank(HX, n), rz = gf2.rank(HZ, n);
+      const k = n - rx - rz;
+      if (k === 0) {
+        verdict = h('p', { class: 'status is-stabilizer' }, `Valid: H_X·H_Zᵀ = 0, so every X-type check commutes with every Z-type check. But k = n − rank H_X − rank H_Z = ${n} − ${rx} − ${rz} = 0: the checks fix the state completely and there is no room for a logical qubit.`);
+      } else {
+        const dX = gf2.minWeightOutside(HZ, HX, n), dZ = gf2.minWeightOutside(HX, HZ, n);
+        verdict = h('p', { class: 'status is-identity' },
+          `Valid: H_X·H_Zᵀ = 0. The CSS code is [[${n}, ${k}, ${Math.min(dX, dZ)}]]: k = ${n} − ${rx} − ${rz} = ${k}; the lightest X̄ (in ker H_Z, not a product of X checks) has weight d_X = ${dX}, the lightest Z̄ (in ker H_X, not a product of Z checks) has weight d_Z = ${dZ}.`,
+          this.kx === 'hamming7' && this.kz === 'hamming7' ? ' This is the Steane code.' : '');
+      }
+    } else {
+      const [i, j] = bad[0];
+      const overlap = []; for (let q = 0; q < n; q++) if (HX[i][q] && HZ[j][q]) overlap.push(q + 1);
+      verdict = h('p', { class: 'status is-logical' }, `Not a code: ${bad.length} of the ${P.length * (P[0]?.length ?? 0)} entries of H_X·H_Zᵀ are 1. For example X-check ${i + 1} and Z-check ${j + 1} overlap on qubit${overlap.length > 1 ? 's' : ''} ${overlap.join(', ')}, an odd number, so they anticommute and cannot both be measured.`);
+    }
+    this.replaceChildren(
+      header(this, 'Build a CSS code from two classical codes', 'Choose the classical code for each check type.'),
+      h('div', { class: 'controls' }, this.pick('kx', 'X-type checks H_X from '), this.pick('kz', 'Z-type checks H_Z from ')),
+      h('div', { class: 'pcm-pair' },
+        matrixTable(HX, { kind: 'x', colLabels, rowLabels: HX.map((_, i) => `X${subscript(i + 1)}`), caption: `H_X, ${HX.length} × ${n}` }),
+        matrixTable(HZ, { kind: 'z', colLabels, rowLabels: HZ.map((_, i) => `Z${subscript(i + 1)}`), caption: `H_Z, ${HZ.length} × ${n}` }),
+        h('div', { class: 'scroll' }, h('table', { class: 'pcm pcm-prod' },
+          h('caption', {}, 'H_X·H_Zᵀ (must be all zero)'),
+          h('thead', {}, h('tr', {}, h('th', {}, ''), HZ.map((_, j) => h('th', {}, `Z${subscript(j + 1)}`)))),
+          h('tbody', {}, P.map((row, i) => h('tr', {}, h('th', {}, `X${subscript(i + 1)}`), Array.from(row).map((b) => h('td', { class: b ? 'bad' : '' }, b ? '1' : '0')))))))),
+      verdict);
+  }
+}
+
+/* ----------------------------------------------------------- <qec-hgp> */
+
+class QecHgp extends Base {
+  connectedCallback() {
+    if (this.dataset.ready) return;
+    this.dataset.ready = '1';
+    setup(this);
+    this.keys = attr(this, 'codes', 'rep3,rep4,rep5,ring3,ring4,hamming7').split(',');
+    this.k1 = attr(this, 'a', 'rep3');
+    this.k2 = attr(this, 'b', 'rep3');
+    this.allowed = kinds(attr(this, 'allowed', 'XZY'));
+    this.p = Number(attr(this, 'p', '0.05'));
+    this.hover = null;
+    this.id ||= nextId('hg');
+    this.setCodes(attr(this, 'initial'));
+  }
+
+  setCodes(initial) {
+    this.code = getCode(`hgp:${this.k1},${this.k2}`);
+    this.err = initial ? Pauli.fromString(initial, this.code.n) : Pauli.identity(this.code.n);
+    this.bp = null;
+    this.render();
+  }
+
+  cycle(i) {
+    const order = ['I', ...this.allowed];
+    this.err.set(i, order[(order.indexOf(this.err.at(i)) + 1) % order.length]);
+    this.bp = null;
+    this.render();
+  }
+
+  sample() {
+    const n = this.code.n;
+    this.err = Pauli.identity(n);
+    for (let q = 0; q < n; q++) {
+      if (this.allowed.includes('X') && Math.random() < this.p) this.err.multiplyAt(q, 'X');
+      if (this.allowed.includes('Z') && Math.random() < this.p) this.err.multiplyAt(q, 'Z');
+    }
+    this.bp = null;
+    this.render();
+  }
+
+  runBP() {
+    const { HX, HZ } = this.code.extra;
+    const eX = Uint8Array.from(this.err.x), eZ = Uint8Array.from(this.err.z);
+    const x = minSumBP(HZ, gf2.mulVec(HZ, eX), this.p);
+    const z = minSumBP(HX, gf2.mulVec(HX, eZ), this.p);
+    this.bp = { x, z, t: Math.max(x.iterations, z.iterations) };
+    this.render();
+  }
+
+  /** Grid geometry: node at (row r, col c) from the two classical codes' layouts. */
+  geometry() {
+    const { c1, c2 } = this.code.extra.hgp;
+    const pos = (order) => { const m = new Map(); order.forEach((id, i) => m.set(id, i)); return m; };
+    return { c1, c2, r: pos(c1.order), c: pos(c2.order), rows: c1.order.length, cols: c2.order.length };
+  }
+
+  lattice() {
+    const code = this.code;
+    const { HX, HZ } = code.extra;
+    const g = this.geometry();
+    const { c1, c2 } = g;
+    const n1 = c1.n, n2 = c2.n, m2 = c2.m;
+    const size = Math.max(g.rows, g.cols);
+    const s = Math.max(26, Math.min(44, Math.floor(520 / size)));
+    const pad = 14;
+    const W = pad * 2 + g.cols * s, H = pad * 2 + g.rows * s;
+    const X = (col) => pad + (col + 0.5) * s, Y = (row) => pad + (row + 0.5) * s;
+    const eX = Uint8Array.from(this.err.x), eZ = Uint8Array.from(this.err.z);
+    const sX = gf2.mulVec(HX, eZ), sZ = gf2.mulVec(HZ, eX);
+    // node positions
+    const qpos = [];
+    for (let i = 0; i < n1; i++) for (let j = 0; j < n2; j++) qpos.push([g.r.get('b' + i), g.c.get('b' + j)]);
+    for (let a = 0; a < c1.m; a++) for (let b = 0; b < m2; b++) qpos.push([g.r.get('c' + a), g.c.get('c' + b)]);
+    const xpos = [], zpos = [];
+    for (let a = 0; a < c1.m; a++) for (let j = 0; j < n2; j++) xpos.push([g.r.get('c' + a), g.c.get('b' + j)]);
+    for (let i = 0; i < n1; i++) for (let b = 0; b < m2; b++) zpos.push([g.r.get('b' + i), g.c.get('c' + b)]);
+    const els = [];
+    const edges = (Hm, idx, pos) => { const [r, c] = pos[idx]; Hm[idx].forEach((b, q) => { if (b) els.push(svg('line', { x1: X(c), y1: Y(r), x2: X(qpos[q][1]), y2: Y(qpos[q][0]), class: 'hg-edge' })); }); };
+    sX.forEach((b, i) => { if (b) edges(HX, i, xpos); });
+    sZ.forEach((b, i) => { if (b) edges(HZ, i, zpos); });
+    const hoverLayer = svg('g', { class: 'hg-hover' });
+    const showEdges = (Hm, idx, pos) => {
+      const [r, c] = pos[idx];
+      hoverLayer.replaceChildren(...Array.from(Hm[idx]).flatMap((b, q) => (b ? [svg('line', { x1: X(c), y1: Y(r), x2: X(qpos[q][1]), y2: Y(qpos[q][0]), class: 'hg-edge hg-edge-hover' })] : [])));
+    };
+    els.push(hoverLayer);
+    const check = (type, i, [r, c], lit, Hm) => {
+      const deg = Hm[i].reduce((a, b) => a + b, 0);
+      return svg('g', { class: `hg-check hg-${type}${lit ? ' lit' : ''}`,
+        onpointerenter: () => showEdges(Hm, i, type === 'X' ? xpos : zpos), onpointerleave: () => hoverLayer.replaceChildren() },
+        svg('title', {}, `${type}-type check ${i + 1}, weight ${deg}: ${lit ? 'violated (−1)' : 'satisfied (+1)'}`),
+        svg('rect', { x: X(c) - s * 0.36, y: Y(r) - s * 0.36, width: s * 0.72, height: s * 0.72, rx: 3 }));
+    };
+    xpos.forEach((pos, i) => els.push(check('X', i, pos, sX[i], HX)));
+    zpos.forEach((pos, i) => els.push(check('Z', i, pos, sZ[i], HZ)));
+    const t = this.bp ? Math.min(this.bpT ?? this.bp.t, this.bp.t) : 0;
+    qpos.forEach(([r, c], q) => {
+      const op = this.err.at(q);
+      const gq = svg('g', { class: `hg-qubit op-${op}`, role: 'button', tabindex: 0, 'data-q': q,
+        'aria-label': `qubit ${q + 1}: ${op === 'I' ? 'no error' : op + ' error'}`,
+        onclick: () => this.cycle(q), onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.cycle(q); } } },
+        svg('title', {}, `qubit ${q + 1}${op === 'I' ? '' : ': ' + op}`));
+      if (this.bp) {
+        const at = (run) => run.history[Math.min(t, run.history.length) - 1];
+        const px = flipProbability(at(this.bp.x).L[q]), pz = flipProbability(at(this.bp.z).L[q]);
+        if (px > 0.02) gq.append(svg('circle', { cx: X(c), cy: Y(r), r: s * 0.44, class: 'hg-belief-x', 'stroke-opacity': Math.min(1, px).toFixed(2) }));
+        if (pz > 0.02) gq.append(svg('circle', { cx: X(c), cy: Y(r), r: s * 0.44 + 3.5, class: 'hg-belief-z', 'stroke-opacity': Math.min(1, pz).toFixed(2) }));
+      }
+      gq.append(svg('circle', { cx: X(c), cy: Y(r), r: s * 0.26 }));
+      if (op !== 'I') gq.append(svg('text', { x: X(c), y: Y(r) + 4, 'text-anchor': 'middle', class: 'hg-op' }, op));
+      els.push(gq);
+    });
+    return { svg: svg('svg', { viewBox: `0 0 ${W} ${H}`, class: 'hg-lattice', style: { maxWidth: `${W}px` }, role: 'group',
+      'aria-label': `Hypergraph product lattice: ${code.n} qubits (circles), ${HX.length} X-type checks and ${HZ.length} Z-type checks (squares)` }, els), sX, sZ };
+  }
+
+  bpPanel() {
+    if (!this.bp) return null;
+    const code = this.code;
+    const t = Math.min(this.bpT ?? this.bp.t, this.bp.t);
+    const corr = Pauli.identity(code.n);
+    const fx = this.bp.x.history[this.bp.x.history.length - 1].e, fz = this.bp.z.history[this.bp.z.history.length - 1].e;
+    fx.forEach((b, q) => { if (b) corr.multiplyAt(q, 'X'); });
+    fz.forEach((b, q) => { if (b) corr.multiplyAt(q, 'Z'); });
+    const r = code.classify(this.err.mul(corr));
+    const conv = this.bp.x.converged && this.bp.z.converged;
+    const half = (run, kind, H) => run.converged
+      ? `${kind} errors (checks ${H}): converged after ${run.iterations} iteration${run.iterations > 1 ? 's' : ''}.`
+      : `${kind} errors (checks ${H}): no hard decision reproduced the syndrome within ${run.iterations} iterations.`;
+    const verdict = !conv ? 'BP failed to find an error that explains the syndrome. On quantum codes this usually means several equally good explanations, degenerate up to stabilizers, are pulling the beliefs in different directions.'
+      : (r.kind === 'identity' || r.kind === 'stabilizer') ? `Correction ${corr.toLabelled(code.labels)}; net effect ${r.kind === 'identity' ? 'none' : 'a stabilizer'}: recovered.`
+        : `Correction ${corr.toLabelled(code.labels)} matches the syndrome, but the net effect is a logical ${r.action.join(' ')}: decoding failed.`;
+    return h('div', { class: `decoder ${conv && r.kind !== 'logical' ? 'ok' : 'fail'}` },
+      h('p', { class: 'dec-line' }, half(this.bp.x, 'X', 'H_Z')),
+      h('p', { class: 'dec-line' }, half(this.bp.z, 'Z', 'H_X')),
+      h('p', { class: 'dec-line' }, h('b', {}, verdict)),
+      slider('show beliefs after iteration', { id: `${this.id}-iter`, min: 1, max: this.bp.t, step: 1, value: t, format: (v) => `${v} of ${this.bp.t}`,
+        oninput: (v) => { this.bpT = v; this.render(); } }));
+  }
+
+  render() {
+    const code = this.code;
+    const { HX, HZ, hgp: { c1, c2 } } = code.extra;
+    const { svg: lat, sX, sZ } = this.lattice();
+    const rowW = (Hm) => Math.max(...Hm.map((r) => r.reduce((a, b) => a + b, 0)));
+    const colW = Array.from({ length: code.n }, (_, q) => HX.reduce((a, r) => a + r[q], 0) + HZ.reduce((a, r) => a + r[q], 0));
+    const fmtD = (d) => (Number.isFinite(d) ? d : '∞');
+    const lit = sX.reduce((a, b) => a + b, 0) + sZ.reduce((a, b) => a + b, 0);
+    this.replaceChildren(
+      header(this, 'Hypergraph product of two classical codes', 'Choose the two codes; click a qubit to cycle X → Z → Y; hover a check to see its qubits.'),
+      h('div', { class: 'controls' }, ['k1', 'k2'].map((w, idx) => h('label', { class: 'pick', for: `${this.id}-${w}` }, idx ? 'code 2: ' : 'code 1: ',
+        h('select', { id: `${this.id}-${w}`, onchange: (e) => { this[w] = e.target.value; this.setCodes(); } },
+          this.keys.map((k) => h('option', { value: k, selected: k === this[w] }, classical(k).name)))))),
+      h('div', { class: 'scroll' }, h('table', { class: 'w-table hg-params' },
+        h('thead', {}, h('tr', {}, h('th', {}, ''), h('th', {}, 'n'), h('th', {}, 'k'), h('th', {}, 'd'), h('th', {}, 'm (checks)'), h('th', {}, 'kᵀ'), h('th', {}, 'dᵀ'))),
+        h('tbody', {},
+          [c1, c2].map((c, i) => h('tr', {}, h('td', {}, `code ${i + 1}: ${c.short}`), h('td', { class: 'mono' }, c.n), h('td', { class: 'mono' }, c.k), h('td', { class: 'mono' }, fmtD(c.d)), h('td', { class: 'mono' }, c.m), h('td', { class: 'mono' }, c.kT), h('td', { class: 'mono' }, fmtD(c.dT)))),
+          h('tr', { class: 'lit' }, h('td', {}, 'product'), h('td', { class: 'mono' }, `${c1.n}·${c2.n} + ${c1.m}·${c2.m} = ${code.n}`), h('td', { class: 'mono' }, `${c1.k}·${c2.k} + ${c1.kT}·${c2.kT} = ${code.k}`),
+            h('td', { class: 'mono' }, code.knownDistance ?? '—'), h('td', { class: 'mono' }, `${HX.length} X + ${HZ.length} Z`), h('td', {}, ''), h('td', {}, ''))))),
+      h('p', { class: 'w-meta' }, `Largest check weight ${Math.max(rowW(HX), rowW(HZ))}, largest number of checks on one qubit ${Math.max(...colW)}.`),
+      lat,
+      h('p', { class: 'w-note' }, 'Circles are qubits; orange squares are X-type checks (they detect Z errors), blue squares Z-type checks (they detect X errors). A square turns solid when its check is violated, and lines join it to its qubits.',
+        this.bp ? ' Rings show BP\'s belief that a qubit carries an X error (inner, orange) or a Z error (outer, blue).' : ''),
+      h('p', { class: `status ${lit ? 'is-detectable' : ''}` }, this.err.isIdentity() ? 'No error.' : `${this.err.toLabelled(code.labels)}: ${lit} check${lit === 1 ? '' : 's'} violated. ${code.classify(this.err).kind === 'logical' ? 'No check is violated, yet the error acts as ' + code.classify(this.err).action.join(' ') + '.' : ''}`),
+      this.bpPanel(),
+      h('div', { class: 'controls' },
+        slider('p =', { id: `${this.id}-p`, min: 0.01, max: 0.2, step: 0.01, value: this.p, live: true, format: (v) => v.toFixed(2), oninput: (v) => { this.p = v; } }),
+        h('button', { type: 'button', onclick: () => this.sample() }, 'Sample errors at p'),
+        h('button', { type: 'button', class: 'primary', onclick: () => { this.bpT = undefined; this.runBP(); } }, 'Decode with BP'),
+        h('button', { type: 'button', onclick: () => { this.err = Pauli.identity(code.n); this.bp = null; this.render(); } }, 'Clear errors')));
+  }
+}
+
 /* ------------------------------------------------------- <qec-tabs> */
 
 /**
@@ -1284,6 +1667,9 @@ export const components = {
   'qec-state-view': QecStateView,
   'qec-code-view': QecCodeView,
   'qec-projection': QecProjection,
+  'qec-checks': QecChecks,
+  'qec-css-builder': QecCssBuilder,
+  'qec-hgp': QecHgp,
   'qec-circuit': QecCircuit,
   'qec-suppression': QecSuppression,
   'qec-syndrome-table': QecSyndromeTable,

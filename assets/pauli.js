@@ -181,6 +181,7 @@ export class StabilizerCode {
     this.logicals = (spec.logicals ?? []).map((l) => ({ X: toPauli(l.X, this.n), Z: toPauli(l.Z, this.n) }));
     this.labels = spec.labels ?? Array.from({ length: this.n }, (_, i) => subscript(i + 1));
     this.description = spec.description ?? '';
+    this.knownDistance = spec.distance;
     this.extra = spec.extra ?? {};
     this.verify();
   }
@@ -336,7 +337,7 @@ export class StabilizerCode {
 
   /** '[[n, k, d]]' with d found by search, or '?' if the search gave up. */
   params() {
-    const d = this.distance();
+    const d = this.knownDistance ?? this.distance();
     return `[[${this.n}, ${this.k}, ${d ?? '?'}]]`;
   }
 }

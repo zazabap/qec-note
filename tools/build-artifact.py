@@ -20,7 +20,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 BASE = 'https://zazabap.github.io/qec-note/'
-MODULES = ['pauli.js', 'codes.js', 'state.js', 'widgets.js']
+MODULES = ['pauli.js', 'gf2.js', 'bp.js', 'codes.js', 'state.js', 'widgets.js']
 
 parser = argparse.ArgumentParser()
 parser.add_argument('page', nargs='?', default='01-quantum-redundancy.html')

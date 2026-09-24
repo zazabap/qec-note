@@ -6,7 +6,8 @@
 // Part 1 needs only the bit-flip repetition codes; later parts add CSS and
 // qLDPC constructions here.
 
-import { StabilizerCode } from './pauli.js';
+import { Pauli, StabilizerCode, subscript } from './pauli.js';
+import * as gf2 from './gf2.js';
 
 /**
  * Bit-flip repetition code on n qubits: |ψ⟩_L = α|0…0⟩ + β|1…1⟩,
@@ -91,11 +92,123 @@ export function shorCode() {
   });
 }
 
+/* ------------------------------------------------------ classical codes */
+
+/**
+ * Small classical codes, given by parity-check matrices H (rows are checks).
+ * `order` lists the Tanner-graph nodes ('b0', 'c0', …) in the order the
+ * hypergraph-product lattice lays them out: interleaved for repetition codes,
+ * so that their product is the surface code, bits then checks otherwise.
+ */
+function chain(n) {
+  const rows = [];
+  for (let i = 0; i < n - 1; i++) rows.push('0'.repeat(i) + '11' + '0'.repeat(n - i - 2));
+  const order = [];
+  for (let i = 0; i < n; i++) { order.push('b' + i); if (i < n - 1) order.push('c' + i); }
+  return { name: `repetition code [${n},1,${n}]`, short: `rep ${n}`, H: gf2.fromStrings(rows), order };
+}
+function ring(n) {
+  const c = chain(n);
+  const rows = gf2.toStrings(c.H);
+  rows.push('1' + '0'.repeat(n - 2) + '1');
+  const order = [];
+  for (let i = 0; i < n; i++) order.push('b' + i, 'c' + i);
+  return { name: `cyclic repetition code, ${n} bits`, short: `ring ${n}`, H: gf2.fromStrings(rows), order };
+}
+const HAMMING = ['0001111', '0110011', '1010101'];   // column j is j in binary: the syndrome names the bit
+function bitsThenChecks(H) {
+  const n = H[0].length, m = H.length;
+  return [...Array.from({ length: n }, (_, i) => 'b' + i), ...Array.from({ length: m }, (_, i) => 'c' + i)];
+}
+function named(name, short, rows) {
+  const H = gf2.fromStrings(rows);
+  return { name, short, H, order: bitsThenChecks(H) };
+}
+
+export const CLASSICAL = {
+  hamming7: () => named('Hamming code [7,4,3]', 'Hamming', HAMMING),
+  simplex7: () => named('simplex code [7,3,4] (dual of Hamming)', 'simplex', gf2.toStrings(gf2.kernel(gf2.fromStrings(HAMMING)))),
+  even7: () => named('even-weight code [7,6,2]', 'even weight', ['1111111']),
+  rep7: () => chain(7),
+  rep3: () => chain(3),
+  rep4: () => chain(4),
+  rep5: () => chain(5),
+  ring3: () => ring(3),
+  ring4: () => ring(4),
+};
+
+export function classical(name) {
+  const c = CLASSICAL[name]();
+  const H = c.H, n = H[0].length;
+  const k = n - gf2.rank(H, n);
+  const d = gf2.classicalDistance(H, n);
+  const HT = gf2.transpose(H, n);
+  const kT = H.length - gf2.rank(HT, H.length);
+  const dT = kT ? gf2.classicalDistance(HT, H.length) : Infinity;
+  return { ...c, key: name, n, m: H.length, k, d, kT, dT };
+}
+
+/* --------------------------------------------------------------- CSS codes */
+
+/**
+ * The CSS code with X-type checks from the rows of HX and Z-type checks from
+ * the rows of HZ. Requires HX·HZᵀ = 0. Generators are listed X-type first.
+ * Distance: searched when the kernels are small, else taken from `distance`.
+ */
+export function cssCode(name, HX, HZ, { distance, labels, extra = {}, description = '' } = {}) {
+  const n = (HX[0] ?? HZ[0]).length;
+  if (!gf2.isZero(gf2.mul(HX, gf2.transpose(HZ, n)))) throw new Error('HX·HZᵀ ≠ 0: the checks do not commute');
+  const toPauli = (row, kind) => { const p = Pauli.identity(n); row.forEach((b, j) => { if (b) p.set(j, kind); }); return p; };
+  // drop dependent rows so that k = n − (number of generators)
+  const indep = (H) => gf2.rref(H, n).R;
+  const gx = indep(HX), gz = indep(HZ);
+  const L = gf2.cssLogicals(HX, HZ, n);
+  let d = distance;
+  if (d === undefined) {
+    const dX = gf2.minWeightOutside(HZ, HX, n), dZ = gf2.minWeightOutside(HX, HZ, n);
+    if (dX !== null && dZ !== null) d = Math.min(dX, dZ);
+  }
+  return new StabilizerCode({
+    name, n,
+    stabilizers: [...gx.map((r) => toPauli(r, 'X')), ...gz.map((r) => toPauli(r, 'Z'))],
+    logicals: L.X.map((x, i) => ({ X: toPauli(x, 'X'), Z: toPauli(L.Z[i], 'Z') })),
+    labels, distance: d === Infinity ? undefined : d, description,
+    extra: { ...extra, css: true, HX, HZ },
+  });
+}
+
+/** The Steane [[7,1,3]] code: both check matrices are the Hamming code's. */
+export function steaneCode() {
+  const H = gf2.fromStrings(HAMMING);
+  return cssCode('Steane [[7,1,3]] code', H, H, { description: 'X and Z checks both from the [7,4,3] Hamming code.' });
+}
+
+/**
+ * The hypergraph product of two classical codes (Tillich and Zémor):
+ *   H_X = [H₁ ⊗ I_{n₂} | I_{m₁} ⊗ H₂ᵀ],   H_Z = [I_{n₁} ⊗ H₂ | H₁ᵀ ⊗ I_{m₂}].
+ * Qubits (i, j) with i a bit of code 1 and j a bit of code 2 come first,
+ * then qubits (a, b) with a, b checks. d = min(d₁, d₂, d₁ᵀ, d₂ᵀ).
+ */
+export function hypergraphProduct(key1, key2) {
+  const c1 = classical(key1), c2 = classical(key2);
+  const { n: n1, m: m1 } = c1, { n: n2, m: m2 } = c2;
+  const H1 = c1.H, H2 = c2.H;
+  const HX = gf2.hstack(gf2.kron(H1, gf2.identity(n2)), gf2.kron(gf2.identity(m1), gf2.transpose(H2, n2)));
+  const HZ = gf2.hstack(gf2.kron(gf2.identity(n1), H2), gf2.kron(gf2.transpose(H1, n1), gf2.identity(m2)));
+  const d = Math.min(c1.d, c2.d, c1.dT, c2.dT);
+  const code = cssCode(`HGP(${c1.short}, ${c2.short})`, HX, HZ, {
+    distance: Number.isFinite(d) ? d : undefined,
+    extra: { hgp: { c1, c2 } },
+  });
+  return code;
+}
+
 const CATALOG = {
   'two-qubit': () => repetitionCode(2),
   'three-qubit': () => repetitionCode(3),
   'four-two-two': fourTwoTwoCode,
   shor: shorCode,
+  steane: steaneCode,
 };
 
 const cache = new Map();
@@ -105,7 +218,9 @@ export function getCode(name) {
   if (cache.has(name)) return cache.get(name);
   let code;
   const m = /^repetition[:-](\d+)$/.exec(name);
+  const hg = /^hgp:(\w+),(\w+)$/.exec(name);
   if (m) code = repetitionCode(+m[1]);
+  else if (hg) code = hypergraphProduct(hg[1], hg[2]);
   else if (CATALOG[name]) code = CATALOG[name]();
   else throw new Error(`unknown code '${name}'`);
   cache.set(name, code);

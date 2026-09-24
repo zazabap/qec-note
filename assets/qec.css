@@ -175,6 +175,52 @@ summary { cursor: pointer; color: var(--muted); }
 .error-panel { margin-top: 1rem; padding-top: 0.7rem; border-top: 1px dashed var(--rule); }
 .panel-head { margin: 0 0 0.3rem; }
 
+/* parity-check matrices */
+.pick { display: inline-flex; align-items: center; gap: 0.4rem; }
+.pick select { font: inherit; padding: 0.15rem 0.3rem; border: 1px solid var(--ink); border-radius: 3px; background: var(--paper); color: var(--ink); max-width: 100%; }
+.pcm-pair { display: flex; flex-wrap: wrap; gap: 0.6rem 1.6rem; align-items: flex-start; margin: 0.6rem 0; }
+.pcm { border-collapse: collapse; font-family: var(--mono); font-size: 0.82rem; }
+.pcm caption { font-family: var(--sans); font-size: 0.8rem; color: var(--muted); text-align: left; padding-bottom: 0.25rem; caption-side: top; }
+.pcm th, .pcm td { width: 1.55rem; height: 1.45rem; padding: 0; text-align: center; border: 1px solid var(--rule); }
+.pcm thead th { font-weight: 400; color: var(--muted); border: 0; }
+.pcm thead th.hit { color: var(--ink); font-weight: 700; }
+.pcm tbody th { font-weight: 400; padding-inline: 0.3rem; width: auto; border: 0; text-align: right; }
+.pcm td { color: var(--rule); }
+.pcm-x td.one { background: var(--x-tint); color: var(--ink); }
+.pcm-z td.one { background: var(--z-tint); color: var(--ink); }
+.pcm-x td.one.hit { background: var(--x); color: #fff; }
+.pcm-z td.one.hit { background: var(--z); color: #fff; }
+.pcm td.syn, .pcm th.syn { border-left: 2px solid var(--ink); color: var(--ink); }
+.pcm tr.lit td.syn { background: var(--ink); color: var(--paper); font-weight: 700; }
+.pcm-prod td { color: var(--muted); }
+.pcm-prod td.bad { background: var(--bad); color: #fff; font-weight: 700; }
+.dec-line { margin: 0.15rem 0; }
+
+/* hypergraph-product lattice */
+.hg-lattice { display: block; width: 100%; height: auto; margin: 0.6rem 0; font-family: var(--sans); }
+.hg-edge { stroke: var(--ink); stroke-width: 1.2; stroke-opacity: 0.55; }
+.hg-edge-hover { stroke-dasharray: 3 2; stroke-opacity: 0.8; }
+.hg-check rect { stroke: none; }
+.hg-X rect { fill: var(--x-tint); }
+.hg-Z rect { fill: var(--z-tint); }
+.hg-X.lit rect { fill: var(--x); }
+.hg-Z.lit rect { fill: var(--z); }
+.hg-qubit { cursor: pointer; }
+.hg-qubit circle:last-of-type { fill: var(--paper); stroke: var(--ink); stroke-width: 1.6; }
+.hg-qubit.op-X circle:last-of-type { fill: var(--x); stroke: var(--x); }
+.hg-qubit.op-Z circle:last-of-type { fill: var(--z); stroke: var(--z); }
+.hg-qubit.op-Y circle:last-of-type { fill: var(--ink); stroke: var(--ink); }
+.hg-qubit:focus-visible { outline: 2px solid var(--z); outline-offset: 2px; }
+.hg-op { font-size: 11px; font-weight: 700; fill: #fff; pointer-events: none; }
+.hg-belief-x { fill: none; stroke: var(--x); stroke-width: 3; }
+.hg-belief-z { fill: none; stroke: var(--z); stroke-width: 3; }
+.hg-params td, .hg-params th { white-space: nowrap; }
+
+/* references */
+ol.refs { padding-left: 1.4rem; font-size: 0.95em; }
+ol.refs li { margin: 0.45rem 0; }
+ol.refs .why { display: block; color: var(--muted); font-size: 0.93em; }
+
 /* ancilla outcomes under the circuit */
 .outcomes { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.6rem; margin: 0.4rem 0; }
 .outcomes-name { color: var(--muted); }
