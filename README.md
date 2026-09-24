@@ -65,6 +65,15 @@ A figure is a tag in the page:
 | `qec-circuit` | Encoder, error stage and syndrome extraction stepped gate by gate; the data register split by ancilla value; Born-rule measurement; optional recovery | `code`, `coherent` (offer eq. 20), `decoder`, `theta`, `error` |
 | `qec-suppression` | The four terms of eq. 21 and the plot of eq. 24 against the unencoded error rate | `p` |
 | `qec-syndrome-table` | Every error pattern, its syndrome and what the decoder does | `code`, `errors` |
+| `qec-figure` | Wraps several of the above into one lettered figure whose parts share a single error: change it in any part (qubit buttons, circuit chips, or a table row) and the others follow | `label`, `title`, `error` (initial shared error, e.g. `XII`), `hint` |
+
+```html
+<qec-figure code="three-qubit" label="D" error="XII" title="The three-qubit code">
+  <qec-circuit code="three-qubit" coherent decoder title="Gate by gate"></qec-circuit>
+  <qec-state-view code="three-qubit" allowed="X" decoder title="Subspaces and the decoder"></qec-state-view>
+  <qec-syndrome-table code="three-qubit" errors="X" title="Every bit-flip pattern"></qec-syndrome-table>
+</qec-figure>
+```
 
 Codes available by name: `two-qubit`, `three-qubit`, `repetition:n`.
 Qubit numbering, generator order and logical operators follow the paper.

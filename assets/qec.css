@@ -183,6 +183,15 @@ summary { cursor: pointer; color: var(--muted); }
 .tip b { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .readout-line { margin: 0.5rem 0; }
 
+/* a figure with several parts sharing one error */
+.qec-figure { display: block; margin: 1.75rem 0 2rem; padding: 0.9rem 0 0.4rem; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule); font-family: var(--sans); font-size: 0.92rem; line-height: 1.45; }
+.qec-figure .qec-widget { margin: 0.9rem 0 0; padding: 0.8rem 0 1rem; border-top: 1px solid var(--rule); border-bottom: 0; }
+.qec-figure .qec-widget .w-kicker { font-family: var(--mono); text-transform: none; letter-spacing: 0; font-size: 0.8rem; }
+.w-table tr.current td { background: var(--z-tint); }
+.w-table tr[role="button"] { cursor: pointer; }
+.w-table tr[role="button"]:hover td { background: var(--tint); }
+.w-table tr[role="button"]:focus-visible { outline: 2px solid var(--z); outline-offset: -2px; }
+
 /* tables inside widgets */
 .w-table { border-collapse: collapse; font-size: 0.88rem; margin: 0.4rem 0; }
 .w-table th, .w-table td { padding: 0.25rem 0.6rem; text-align: left; border-bottom: 1px solid var(--rule); vertical-align: top; }

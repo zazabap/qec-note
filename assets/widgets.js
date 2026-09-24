@@ -64,12 +64,45 @@ const pct = (v) => `${(100 * v).toFixed(1)}%`;
 /** Default input: α = 0.8, β = 0.6, so the two amplitudes are easy to tell apart. */
 const DEFAULT_THETA = 2 * Math.atan2(0.6, 0.8);
 
+const WIDGET_TAGS = 'qec-state-view, qec-circuit, qec-suppression, qec-syndrome-table';
+
+/** Mark the host as a widget (styling, and MathJax leaves it alone). */
+function setup(el) {
+  el.classList.add('qec-widget');
+}
+
 function header(el, fallbackTitle, hint) {
-  const label = attr(el, 'label', '');
+  const fig = el.closest('qec-figure');
+  let kicker;
+  if (fig) {
+    const idx = [...fig.querySelectorAll(WIDGET_TAGS)].indexOf(el) + 1;
+    kicker = `${attr(fig, 'label', '')}.${idx}`;
+  } else {
+    const label = attr(el, 'label', '');
+    kicker = label ? `Figure ${label} · interactive` : 'Interactive';
+  }
   return h('div', { class: 'w-head' },
-    label ? h('span', { class: 'w-kicker' }, `Figure ${label} · interactive`) : h('span', { class: 'w-kicker' }, 'Interactive'),
+    h('span', { class: 'w-kicker' }, kicker),
     h('span', { class: 'w-title' }, attr(el, 'title', fallbackTitle)),
     hint ? h('span', { class: 'w-hint' }, hint) : null);
+}
+
+/**
+ * A figure with several parts that share one error. The <qec-figure> holds
+ * the Pauli; parts hold a reference to it, mutate it in place, and call
+ * broadcast() so every part re-renders.
+ */
+function sharedError(el, n) {
+  const fig = el.closest('qec-figure');
+  if (!fig) return null;
+  fig.err ??= Pauli.fromString(attr(fig, 'error', 'I'.repeat(n)), n);
+  fig.broadcast ??= () => fig.dispatchEvent(new Event('qec-error'));
+  return fig;
+}
+
+function assignPauli(target, source) {
+  target.x.set(source.x);
+  target.z.set(source.z);
 }
 
 function slider(labelText, { min, max, step, value, format, oninput, id }) {
@@ -162,19 +195,28 @@ class QecStateView extends Base {
   connectedCallback() {
     if (this.dataset.ready) return;
     this.dataset.ready = '1';
+    setup(this);
     this.code = getCode(attr(this, 'code', 'three-qubit'));
     this.allowed = kinds(attr(this, 'allowed', 'X'));
     this.theta = Number(attr(this, 'theta', DEFAULT_THETA));
-    this.err = attr(this, 'initial') ? Pauli.fromString(attr(this, 'initial'), this.code.n) : Pauli.identity(this.code.n);
+    this.fig = sharedError(this, this.code.n);
+    this.err = this.fig ? this.fig.err
+      : attr(this, 'initial') ? Pauli.fromString(attr(this, 'initial'), this.code.n) : Pauli.identity(this.code.n);
+    if (this.fig) this.fig.addEventListener('qec-error', () => { const f = this.pendingFocus; this.pendingFocus = undefined; this.render(f); });
     this.layout = subspaces(this.code);
     this.id ||= nextId('sv');
     this.render();
   }
 
+  /** Re-render here, or everywhere if the error is shared. */
+  changed(focusIndex) {
+    if (this.fig) { this.pendingFocus = focusIndex; this.fig.broadcast(); } else this.render(focusIndex);
+  }
+
   cycle(i) {
     const order = ['I', ...this.allowed];
     this.err.set(i, order[(order.indexOf(this.err.at(i)) + 1) % order.length]);
-    this.render(i);
+    this.changed(i);
   }
 
   describe(c, state, encoded) {
@@ -253,10 +295,10 @@ class QecStateView extends Base {
       h('div', { class: 'controls' },
         slider('input |ψ⟩ = cos(θ/2)|0⟩ + sin(θ/2)|1⟩, θ =', { id: `${this.id}-theta`, min: 0, max: Math.PI.toFixed(4), step: 0.01, value: this.theta,
           format: (v) => `${v.toFixed(2)} rad`, oninput: (v) => { this.theta = v; this.render(); } }),
-        h('button', { type: 'button', onclick: () => { this.err = Pauli.identity(code.n); this.render(); } }, 'Clear errors'),
+        h('button', { type: 'button', onclick: () => { assignPauli(this.err, Pauli.identity(code.n)); this.changed(); } }, 'Clear errors'),
         flag(this, 'logical') ? [
-          h('button', { type: 'button', onclick: () => { this.err = this.err.mul(code.logicals[0].X); this.render(); } }, 'Apply X̄ = ' + code.logicals[0].X.toLabelled(code.labels)),
-          h('button', { type: 'button', onclick: () => { this.err = this.err.mul(code.logicals[0].Z); this.render(); } }, 'Apply Z̄ = ' + code.logicals[0].Z.toLabelled(code.labels)),
+          h('button', { type: 'button', onclick: () => { assignPauli(this.err, this.err.mul(code.logicals[0].X)); this.changed(); } }, 'Apply X̄ = ' + code.logicals[0].X.toLabelled(code.labels)),
+          h('button', { type: 'button', onclick: () => { assignPauli(this.err, this.err.mul(code.logicals[0].Z)); this.changed(); } }, 'Apply Z̄ = ' + code.logicals[0].Z.toLabelled(code.labels)),
         ] : null));
     if (focusIndex !== undefined) this.querySelector(`.qubit[data-i="${focusIndex}"]`)?.focus();
   }
@@ -274,11 +316,15 @@ class QecCircuit extends Base {
   connectedCallback() {
     if (this.dataset.ready) return;
     this.dataset.ready = '1';
+    setup(this);
     this.code = getCode(attr(this, 'code', 'two-qubit'));
     this.n = this.code.n;
     this.m = this.code.stabilizers.length;
     this.theta = Number(attr(this, 'theta', DEFAULT_THETA));
-    this.err = attr(this, 'error') ? Pauli.fromString(attr(this, 'error'), this.n) : Pauli.single(this.n, 0, 'X');
+    this.fig = sharedError(this, this.n);
+    this.err = this.fig ? this.fig.err
+      : attr(this, 'error') ? Pauli.fromString(attr(this, 'error'), this.n) : Pauli.single(this.n, 0, 'X');
+    if (this.fig) this.fig.addEventListener('qec-error', () => { this.mode = 'pauli'; this.outcome = null; this.render(); });
     this.mode = 'pauli';               // or 'coherent'
     this.p = 0.1;
     this.outcome = null;               // measured syndrome, once sampled
@@ -534,7 +580,7 @@ class QecCircuit extends Base {
     const errButtons = h('div', { class: 'errpick', role: 'group', 'aria-label': 'choose the error E' },
       h('span', { class: 'errpick-name' }, 'Error E:'),
       Array.from({ length: this.n }, (_, q) => h('button', { type: 'button', class: `chip${this.mode === 'pauli' && this.err.at(q) === 'X' ? ' on' : ''}`, 'aria-pressed': this.mode === 'pauli' && this.err.at(q) === 'X',
-        onclick: () => { if (this.mode !== 'pauli') { this.mode = 'pauli'; } this.err.multiplyAt(q, 'X'); this.outcome = null; this.render(); } }, `X${subscript(q + 1)}`)),
+        onclick: () => { this.mode = 'pauli'; this.err.multiplyAt(q, 'X'); this.outcome = null; if (this.fig) this.fig.broadcast(); else this.render(); } }, `X${subscript(q + 1)}`)),
       flag(this, 'coherent') ? h('button', { type: 'button', class: `chip${this.mode === 'coherent' ? ' on' : ''}`, 'aria-pressed': this.mode === 'coherent',
         onclick: () => { this.mode = 'coherent'; this.outcome = null; this.render(); } }, 'coherent (eq. 20)') : null,
       flag(this, 'coherent') && this.mode === 'coherent' ? slider('p =', { id: `${this.id}-p`, min: 0, max: 0.5, step: 0.01, value: this.p, format: (v) => v.toFixed(2),
@@ -568,6 +614,7 @@ class QecSuppression extends Base {
   connectedCallback() {
     if (this.dataset.ready) return;
     this.dataset.ready = '1';
+    setup(this);
     this.p = Number(attr(this, 'p', '0.1'));
     this.hoverP = null;
     this.id ||= nextId('sp');
@@ -672,7 +719,10 @@ class QecSyndromeTable extends Base {
   connectedCallback() {
     if (this.dataset.ready) return;
     this.dataset.ready = '1';
+    setup(this);
     const code = getCode(attr(this, 'code', 'three-qubit'));
+    this.fig = sharedError(this, code.n);
+    if (this.fig) this.fig.addEventListener('qec-error', () => this.highlight());
     const ks = kinds(attr(this, 'errors', 'X'));
     const rows = code.errorTable(ks);
     const m = code.stabilizers.length;
@@ -696,17 +746,50 @@ class QecSyndromeTable extends Base {
       header(this, `${code.name}: syndromes of every ${ks.join('/')} error pattern`),
       h('div', { class: 'scroll' }, h('table', { class: 'w-table' },
         h('thead', {}, h('tr', {}, h('th', {}, 'error'), h('th', {}, 'weight'), code.stabilizers.map((s) => h('th', { class: 'mono' }, s.toLabelled(code.labels))), h('th', {}, 'syndrome S'), h('th', {}, 'what happens'))),
-        h('tbody', {}, rows.map((r) => h('tr', { class: code.classify(r.error).kind === 'logical' ? 'is-logical' : '' },
+        h('tbody', {}, rows.map((r) => h('tr', {
+          class: code.classify(r.error).kind === 'logical' ? 'is-logical' : '',
+          'data-error': r.error.toString(),
+          tabindex: this.fig ? 0 : undefined,
+          role: this.fig ? 'button' : undefined,
+          title: this.fig ? 'Use this error in the other parts of the figure' : undefined,
+          onclick: this.fig ? () => { assignPauli(this.fig.err, r.error); this.fig.broadcast(); } : undefined,
+          onkeydown: this.fig ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); assignPauli(this.fig.err, r.error); this.fig.broadcast(); } } : undefined,
+        },
           h('td', { class: 'mono' }, r.label), h('td', { class: 'mono' }, r.weight),
           Array.from(r.syndrome).map((b) => h('td', { class: `mono${b === '1' ? ' lit' : ''}` }, b === '1' ? '−1' : '+1')),
           h('td', { class: 'mono' }, r.syndrome), h('td', {}, verdict(r))))))),
-      h('p', { class: 'w-note' }, `Rows are ordered by weight. The ${m} generator${m > 1 ? 's' : ''} ${code.stabilizers.map((s) => s.toLabelled(code.labels)).join(' and ')} give${m > 1 ? '' : 's'} ${2 ** m} possible syndromes for ${rows.length} error patterns, so some patterns must share a syndrome; the decoder always assumes the lightest one.`));
+      h('p', { class: 'w-note' }, `Rows are ordered by weight. The ${m} generator${m > 1 ? 's' : ''} ${code.stabilizers.map((s) => s.toLabelled(code.labels)).join(' and ')} give${m > 1 ? '' : 's'} ${2 ** m} possible syndromes for ${rows.length} error patterns, so some patterns must share a syndrome; the decoder always assumes the lightest one.`,
+        this.fig ? ' Click a row to apply that error in the other parts.' : ''));
+    this.highlight();
+  }
+
+  highlight() {
+    if (!this.fig) return;
+    const current = this.fig.err.toString();
+    for (const tr of this.querySelectorAll('tbody tr')) tr.classList.toggle('current', tr.dataset.error === current);
+  }
+}
+
+/* ----------------------------------------------------- <qec-figure> */
+
+class QecFigure extends Base {
+  connectedCallback() {
+    if (this.dataset.ready) return;
+    this.dataset.ready = '1';
+    this.classList.add('qec-figure');
+    const label = attr(this, 'label', '');
+    const head = h('div', { class: 'w-head fig-head' },
+      h('span', { class: 'w-kicker' }, label ? `Figure ${label} · interactive, in ${this.querySelectorAll(WIDGET_TAGS).length} parts` : 'Interactive'),
+      h('span', { class: 'w-title' }, attr(this, 'title', '')),
+      h('span', { class: 'w-hint' }, attr(this, 'hint', 'The parts share one error: change it in any of them and the others follow.')));
+    this.prepend(head);
   }
 }
 
 /* ---------------------------------------------------------- register */
 
 export const components = {
+  'qec-figure': QecFigure,
   'qec-state-view': QecStateView,
   'qec-circuit': QecCircuit,
   'qec-suppression': QecSuppression,

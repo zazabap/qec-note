@@ -142,21 +142,21 @@ p_L = \frac{|\alpha_X^2|^2}{|\alpha_I^2|^2 + |\alpha_X^2|^2} = \frac{p_X^2}{(1 -
 \F_3 = \span\{\ket{001}, \ket{110}\},
 \qquad\text{(eq. 25)}
 \]
-<p>and each single flip carries the codespace onto its own piece, \(X_i\ket\psi_\L \in \F_i\). Two stabilizers, \(Z_1Z_2\) and \(Z_2Z_3\), are both \(+1\) on \(\C\), and their pair of eigenvalues is different on each \(\F_i\): \((-1, +1)\) on \(\F_1\), \((-1, -1)\) on \(\F_2\), \((+1, -1)\) on \(\F_3\). The two-bit syndrome \(S = s_1 s_2\) therefore names the error space, hence the qubit, and applying the same \(X_i\) again brings the state home. That is a <em>correction</em> code for a single bit flip. Figure D has the decoder switched on: it reads the syndrome, looks up the flip that produces it, and applies it. Try one flip, then two.</p>
-
-<qec-state-view code="three-qubit" allowed="X" decoder label="D" title="The three-qubit code, with the lookup-table decoder"></qec-state-view>
+<p>and each single flip carries the codespace onto its own piece, \(X_i\ket\psi_\L \in \F_i\). Two stabilizers, \(Z_1Z_2\) and \(Z_2Z_3\), are both \(+1\) on \(\C\), and their pair of eigenvalues is different on each \(\F_i\): \((-1, +1)\) on \(\F_1\), \((-1, -1)\) on \(\F_2\), \((+1, -1)\) on \(\F_3\). The two-bit syndrome \(S = s_1 s_2\) therefore names the error space, hence the qubit, and applying the same \(X_i\) again brings the state home. That is a <em>correction</em> code for a single bit flip.</p>
 
 <aside class="note">
 <p><strong>A typo in the paper.</strong> Eq. 25 prints \(\F_1 = \span\{\ket{100}, \ket{110}\}\). Since \(X_1(\alpha\ket{000} + \beta\ket{111}) = \alpha\ket{100} + \beta\ket{011}\), the second vector should be \(\ket{011}\), as above; \(\ket{110}\) belongs to \(\F_3\).</p>
 </aside>
 
-<p>With three qubits there are eight bit-flip patterns and only four syndromes, so some patterns must share. Figure E lists them all (the paper's table 2). The weight-two patterns each collide with a single flip on the remaining qubit, so the decoder, which always assumes the lightest explanation, completes them to \(X_1X_2X_3\); and \(X_1X_2X_3\) has syndrome 00 and is the logical \(\bar X\). This is exactly how a classical majority vote fails when two of three bits are wrong.</p>
+<p>Figure D puts the whole code in one place. Its three parts share a single error: choose a flip in any of them and the other two follow. Part D.1 is the circuit of the paper's figure 3, which is the two-qubit circuit with one more redundancy qubit and one more ancilla; each stabilizer gets its own Hadamard sandwich, measuring both ancillas gives \(S\), and a recovery stage applies the flip the syndrome points to. Step it with a single flip and the final fidelity is one; with two flips the recovery completes the logical error; in coherent mode a superposition over all four error spaces is sorted into four rows, one of which survives the measurement. Part D.2 is the subspace picture with the lookup decoder switched on: it reads the syndrome, looks up the flip that produces it, and applies it. Part D.3 is the paper's table 2, every bit-flip pattern with its syndrome; click a row to send that error to the other two parts.</p>
 
-<qec-syndrome-table code="three-qubit" errors="X" label="E"></qec-syndrome-table>
+<qec-figure code="three-qubit" label="D" error="XII" title="The three-qubit code: circuit, subspaces and syndromes">
+  <qec-circuit code="three-qubit" coherent decoder title="Gate by gate (paper's figure 3)"></qec-circuit>
+  <qec-state-view code="three-qubit" allowed="X" decoder title="Subspaces, meters and the lookup decoder"></qec-state-view>
+  <qec-syndrome-table code="three-qubit" errors="X" title="Every bit-flip pattern (paper's table 2)"></qec-syndrome-table>
+</qec-figure>
 
-<p>The circuit, the paper's figure 3, is the two-qubit circuit with one more redundancy qubit and one more ancilla. Each stabilizer gets its own ancilla and its own Hadamard sandwich; measuring both ancillas gives \(S\). Figure F includes the recovery stage. Run it with a single flip and the final fidelity is one; run it with two flips and the recovery completes the logical error; run it in coherent mode and watch a superposition over all four error spaces get sorted into four rows, one of which survives the measurement.</p>
-
-<qec-circuit code="three-qubit" coherent decoder label="F" title="The three-qubit code, gate by gate (paper's figure 3)"></qec-circuit>
+<p>With three qubits there are eight bit-flip patterns and only four syndromes, so some patterns must share. The table shows where: each weight-two pattern collides with the single flip on the remaining qubit, so the decoder, which always assumes the lightest explanation, completes it to \(X_1X_2X_3\); and \(X_1X_2X_3\) has syndrome 00 and is the logical \(\bar X\). This is exactly how a classical majority vote fails when two of three bits are wrong. Click the \(X_1X_2\) row and watch part D.2 apply \(X_3\).</p>
 
 <p class="eyebrow">Roffe §3.2</p>
 <h2>Quantum code distance</h2>
@@ -166,7 +166,7 @@ p_L = \frac{|\alpha_X^2|^2}{|\alpha_I^2|^2 + |\alpha_X^2|^2} = \frac{p_X^2}{(1 -
 \bar X = X_1X_2X_3, \qquad \bar X\ket0_\L = \ket1_\L,\quad \bar X\ket1_\L = \ket0_\L ,
 \qquad\text{(eq. 26)}
 \]
-<p>of weight three. If bit flips were the only errors, the code would have \(d = 3\) and would correct \(t = \lfloor (d-1)/2 \rfloor = 1\) of them, which is what Figures D and F show.</p>
+<p>of weight three. If bit flips were the only errors, the code would have \(d = 3\) and would correct \(t = \lfloor (d-1)/2 \rfloor = 1\) of them, which is what Figure D shows.</p>
 
 <p>But phase flips are errors too, and to see what they do it helps to switch to the conjugate basis,</p>
 \[
@@ -181,9 +181,9 @@ p_L = \frac{|\alpha_X^2|^2}{|\alpha_I^2|^2 + |\alpha_X^2|^2} = \frac{p_X^2}{(1 -
 \]
 <p>and a single phase flip on any one qubit changes the sign of the \(\ket{111}\) amplitude: \(Z_1\ket+_\L = \ket-_\L\). Both stabilizers are products of \(Z\)s and commute with \(Z_1\), so the syndrome is 00 and nothing is detected. \(\bar Z = Z_1\) is a logical operator of weight one, and the quantum distance of the three-qubit code is \(d = 1\). It corrects nothing.</p>
 
-<p>Figure G starts from \(\ket+\) and allows both kinds of error. Apply \(Z_1\): the bars stay in \(\C\), one of them flips downward, both meters stay at \(+1\), and the overlap table shows the state has moved from \(\ket+_\L\) to \(\ket-_\L\). Apply \(X_1\) instead and the error is caught at once. The code is blind in exactly one direction.</p>
+<p>Figure E starts from \(\ket+\) and allows both kinds of error. Apply \(Z_1\): the bars stay in \(\C\), one of them flips downward, both meters stay at \(+1\), and the overlap table shows the state has moved from \(\ket+_\L\) to \(\ket-_\L\). Apply \(X_1\) instead and the error is caught at once. The code is blind in exactly one direction.</p>
 
-<qec-state-view code="three-qubit" allowed="XZ" logical theta="1.5708" label="G" title="Phase flips on the three-qubit code, in the conjugate basis"></qec-state-view>
+<qec-state-view code="three-qubit" allowed="XZ" logical theta="1.5708" label="E" title="Phase flips on the three-qubit code, in the conjugate basis"></qec-state-view>
 
 <h3>Where this goes next</h3>
 
