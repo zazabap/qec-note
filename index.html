@@ -39,16 +39,16 @@ window.MathJax = {
 <p>The paper is the best short route from "a qubit cannot be cloned" to the surface code, and it is written so that its examples can be checked by hand. These notes follow its numbering and its examples closely, so that the two can be read side by side, and add the thing a printed page cannot: the amplitudes themselves, drawn as bars and grouped by subspace, together with the circuits that measure them, stepped one gate at a time. The explanations here are my own; equation numbers in the margins refer to the paper.</p>
 
 <h2>Parts</h2>
-<ol class="contents">
-  <li><a href="01-quantum-redundancy.html">Quantum redundancy and stabilizer measurement</a>
+<ul class="contents">
+  <li><a href="01-quantum-redundancy.html"><b>Part 1.</b> Quantum redundancy and stabilizer measurement</a>
     <span class="desc">Roffe §3. The two- and three-qubit codes, codespace and error spaces, the syndrome-extraction circuit, error suppression by detection, and why the code distance of the three-qubit code is 1.</span></li>
-  <li>Stabilizer codes<span class="planned">planned</span>
+  <li><b>Part 2.</b> Stabilizer codes<span class="planned">planned</span>
     <span class="desc">Roffe §4. The stabilizer formalism, the \([[4,2,2]]\) detection code, logical operators, and the Shor code.</span></li>
-  <li>CSS codes<span class="planned">planned</span>
+  <li><b>Part 3.</b> CSS codes<span class="planned">planned</span>
     <span class="desc">Two classical codes, one quantum code: the Calderbank–Shor–Steane construction, with the Steane code as the worked example.</span></li>
-  <li>Quantum LDPC codes<span class="planned">planned</span>
+  <li><b>Part 4.</b> Quantum LDPC codes<span class="planned">planned</span>
     <span class="desc">Codes whose checks stay small as the code grows: hypergraph products and the basics of belief-propagation decoding.</span></li>
-</ol>
+</ul>
 
 <h2>How the figures work</h2>
 <p>Circles are qubits. Clicking one applies a Pauli error to it and cycles through the errors that figure allows, typically no error, then \(X\), then \(Z\). Bars are amplitudes: the state is written in the computational basis and each basis state gets a column, drawn upward for a positive amplitude and downward for a negative one, with the columns grouped into the codespace \(\C\) and the error spaces \(\F_i\). Each stabilizer reports its eigenvalue on the current state, \(+1\) or \(-1\), and the syndrome collects those readings as bits. Circuit figures are stepped gate by gate, showing the register after each stage, split by the value of the ancilla.</p>

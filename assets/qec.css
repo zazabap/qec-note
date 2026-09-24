@@ -51,9 +51,10 @@ figure { margin: 1.5rem 0; }
 figcaption { font-family: var(--sans); font-size: 0.85rem; color: var(--muted); }
 mjx-container { overflow-x: auto; overflow-y: hidden; }
 mjx-container[display="true"] { margin: 0.9em 0 !important; }
-ol.contents li { margin: 0.5rem 0; }
-ol.contents .desc { display: block; font-size: 0.93em; color: var(--muted); }
-ol.contents .planned { font-family: var(--sans); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); border: 1px solid var(--rule); border-radius: 3px; padding: 0 0.35em; margin-left: 0.4em; vertical-align: 0.1em; }
+.contents { list-style: none; padding-left: 0; }
+.contents li { margin: 0.5rem 0; }
+.contents .desc { display: block; font-size: 0.93em; color: var(--muted); }
+.contents .planned { font-family: var(--sans); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); border: 1px solid var(--rule); border-radius: 3px; padding: 0 0.35em; margin-left: 0.4em; vertical-align: 0.1em; }
 footer { margin-top: 3.5rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--muted); font-size: 0.88rem; }
 
 /* ---------------------------------------------------------- widgets */
