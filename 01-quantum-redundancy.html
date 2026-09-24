@@ -92,7 +92,11 @@ p_L = \frac{p_X^2}{(1 - p_X)^2 + p_X^2} \approx p_X^2 .
 \F_3 = \span\{\ket{001}, \ket{110}\},
 \qquad\text{(eq. 25)}
 \]
-<p>with \(X_i\ket\psi_\L \in \F_i\). The stabilizers \(Z_1Z_2\) and \(Z_2Z_3\) read \((-,+)\), \((-,-)\), \((+,-)\) on \(\F_1, \F_2, \F_3\), so the two-bit syndrome names the flipped qubit and a lookup table undoes it (paper's figure 3, table 2). Eight bit-flip patterns share four syndromes: each weight-two pattern looks like the single flip on the remaining qubit, the decoder completes it to \(X_1X_2X_3 = \bar X\), and the code fails exactly as a classical majority vote does.</p>
+<p>with \(X_i\ket\psi_\L \in \F_i\). The stabilizers \(Z_1Z_2\) and \(Z_2Z_3\) read \((-,+)\), \((-,-)\), \((+,-)\) on \(\F_1, \F_2, \F_3\), so the two-bit syndrome names the flipped qubit and a lookup table undoes it (paper's figure 3, table 2). Eight bit-flip patterns share four syndromes: each weight-two pattern looks like the single flip on the remaining qubit, the decoder completes it to \(X_1X_2X_3 = \bar X\), and the code fails exactly as a classical majority vote does. With the coherent error of eq. 20 on every qubit, the failing terms are the three double flips and the triple flip, so every run is kept and</p>
+\[
+p_L = 3p_X^2(1 - p_X) + p_X^3 = 3p_X^2 - 2p_X^3 ,
+\]
+<p>quadratic like eq. 24 but without discarding anything; the curves again meet at \(p_X = \tfrac12\).</p>
 <aside class="note">
 <p><strong>Typo in the paper.</strong> Eq. 25 prints \(\F_1 = \span\{\ket{100}, \ket{110}\}\); since \(X_1\ket{111} = \ket{011}\), the second vector is \(\ket{011}\).</p>
 </aside>
@@ -123,6 +127,7 @@ p_L = \frac{p_X^2}{(1 - p_X)^2 + p_X^2} \approx p_X^2 .
   <qec-circuit code="three-qubit" coherent decoder title="Syndrome extraction and recovery (paper's figure 3)"></qec-circuit>
   <qec-state-view code="three-qubit" allowed="XZ" decoder logical title="Subspaces, meters, decoder, and the logical Z̄ = Z₁"></qec-state-view>
   <qec-syndrome-table code="three-qubit" errors="X" decoder title="Every bit-flip pattern (paper's table 2)"></qec-syndrome-table>
+  <qec-suppression code="three-qubit" p="0.1" title="Error suppression by correction"></qec-suppression>
 </qec-figure>
 </section>
 </qec-tabs>

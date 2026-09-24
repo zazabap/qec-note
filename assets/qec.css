@@ -161,6 +161,13 @@ summary { cursor: pointer; color: var(--muted); }
 .branch-empty { color: var(--muted); text-align: center; }
 .branch .amp-chart { margin: 0.2rem 0; }
 
+/* ancilla outcomes under the circuit */
+.outcomes { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.6rem; margin: 0.4rem 0; }
+.outcomes-name { color: var(--muted); }
+.outcome-chip { padding: 0.1rem 0.5rem; border: 1px solid var(--rule); border-radius: 3px; font-variant-numeric: tabular-nums; }
+.outcome-chip.dead { opacity: 0.45; }
+.outcome-chip.chosen { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
 /* suppression chart */
 .legend { display: flex; flex-wrap: wrap; gap: 0.3rem 1.2rem; font-size: 0.85rem; color: var(--muted); margin: 0.6rem 0 0.2rem; }
 .key { display: inline-block; width: 1.2em; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 0.45em; }

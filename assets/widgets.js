@@ -527,18 +527,18 @@ class QecCircuit extends Base {
         return `CNOTs from qubit 1 spread the amplitudes onto |${'0'.repeat(n)}⟩ and |${'1'.repeat(n)}⟩ (eq. 12). Nothing is copied: the two amplitudes are still α and β, now shared by ${n} qubits. The state lies in the codespace C.`;
       case 'error':
         return this.mode === 'pauli'
-          ? (this.err.isIdentity() ? 'No error this time. The state is still in C.' : `${errName} rotates the state out of C into an error space. The bars move; their heights do not.`)
+          ? (this.err.isIdentity() ? 'No error this time. The state is still in C.' : `${errName} rotates the state out of C into an error space, without touching α and β. The subspace view below shows where it went.`)
           : `The coherent error ${errName} (eq. 20) puts the state in a superposition over C and the error spaces, with weight (1−p)^${n} on "nothing happened" and smaller weights on each flip pattern (eq. 21).`;
       case 'h1':
         return `Hadamards put the ${anc} in |+⟩. Both branches of the ${anc} now hold a copy of the data state; nothing has been learned yet.`;
       case 'ctrl':
-        return `Controlled on the ${anc === 'ancilla' ? 'ancilla' : 'ancilla A' + subscript(st.k + 1)}, the stabilizer ${this.code.stabilizers[st.k].toLabelled(this.code.labels)} is applied to the data. On the |1⟩ branch of that ancilla the data picks up the stabilizer's eigenvalue: +1 in C, −1 in the error spaces it detects. Watch the sign of the bars in that row.`;
+        return `Controlled on the ${anc === 'ancilla' ? 'ancilla' : 'ancilla A' + subscript(st.k + 1)}, the stabilizer ${this.code.stabilizers[st.k].toLabelled(this.code.labels)} is applied to the data. On the |1⟩ branch of that ancilla the data picks up the stabilizer's eigenvalue as a sign: +1 in C, −1 in the error spaces it detects.`;
       case 'h2':
-        return `The second Hadamards turn that phase into a population: the ${anc} end${m > 1 ? '' : 's'} in |0⟩ where the eigenvalue was +1 and in |1⟩ where it was −1 (eq. 19). The data state is the same in every surviving row: the measurement is about to reveal the subspace, not α and β.`;
+        return `The second Hadamards turn that phase into a population: the ${anc} end${m > 1 ? '' : 's'} in |0⟩ where the eigenvalue was +1 and in |1⟩ where it was −1 (eq. 19). Each ancilla value is now paired with one subspace of the data, and the measurement is about to reveal which, not α and β.`;
       case 'measure': {
         const br = this.compute(this.stage - 1).state.branches(this.ancillas);
         const chosen = br.find((b) => b.bits === this.outcome);
-        return `Measured syndrome S = ${this.outcome} (probability ${fmt(chosen.prob, 3)}). The other rows are gone: the state collapsed onto the data state paired with that outcome. Press "Measure again" to resample from the same pre-measurement state.`;
+        return `Measured syndrome S = ${this.outcome} (probability ${fmt(chosen.prob, 3)}). The data collapsed onto the subspace paired with that outcome. Press "Measure again" to resample from the same pre-measurement state.`;
       }
       case 'recover': {
         const psiL = encode(this.code, State.fromAngle(this.theta));
@@ -555,24 +555,17 @@ class QecCircuit extends Base {
     return '';
   }
 
-  branchRows(state) {
-    const measureIdx = this.stages.findIndex((s) => s.id === 'measure');
+  /** Ancilla outcome probabilities at this stage (the data itself is drawn in the subspace view). */
+  outcomes(state) {
+    const measureIdx = this.stages.findIndex((st) => st.id === 'measure');
+    if (this.stage < this.stages.findIndex((st) => st.id === 'h2')) return null;
     const measured = this.stage >= measureIdx;
     const br = state.branches(this.ancillas);
-    const anyBranching = br.filter((b) => b.prob > 1e-9).length > 1;
-    return h('div', { class: 'branches' },
-      h('p', { class: 'branches-head' }, measured
-        ? `Data register after measuring the ${this.m > 1 ? 'ancillas' : 'ancilla'}`
-        : anyBranching ? `Data register, one row per ${this.m > 1 ? 'ancilla bit string' : 'ancilla value'} (rows are not yet measured; probabilities are what a measurement would give)` : 'Data register'),
-      br.map((b) => {
-        const dead = b.prob < 1e-9;
-        const chosen = measured && b.bits === this.outcome;
-        return h('div', { class: `branch${dead ? ' dead' : ''}${chosen ? ' chosen' : ''}` },
-          h('div', { class: 'branch-head' },
-            h('span', { class: 'mono' }, `${ket(b.bits)}${this.m > 1 ? 'A' : 'A'}`),
-            h('span', { class: 'branch-prob' }, dead ? (measured ? 'not observed' : 'p = 0') : (measured ? `observed` : `p = ${fmt(b.prob, 3)}`))),
-          dead ? h('div', { class: 'branch-empty' }, '—') : ampChart(b.state, this.layout, { compact: true, colW: this.n > 2 ? 40 : 46, height: 96 }));
-      }));
+    const pre = measured ? this.compute(measureIdx - 1).state.branches(this.ancillas) : br;
+    return h('p', { class: 'outcomes' },
+      h('span', { class: 'outcomes-name' }, measured ? 'Ancilla outcome:' : 'If measured now:'),
+      pre.map((b) => h('span', { class: `outcome-chip${b.prob < 1e-9 ? ' dead' : ''}${measured && b.bits === this.outcome ? ' chosen' : ''}` },
+        h('span', { class: 'mono' }, `S = ${b.bits}`), ` p = ${fmt(b.prob, 3)}`)));
   }
 
   controls() {
@@ -600,10 +593,10 @@ class QecCircuit extends Base {
   render() {
     const { state, correction } = this.compute(this.stage);
     this.replaceChildren(
-      header(this, `${this.code.name}: the circuit, stage by stage`, 'Step through the circuit and watch the amplitudes.'),
+      header(this, `${this.code.name}: the circuit, stage by stage`, 'Step through the circuit gate by gate.'),
       this.circuit(),
       h('p', { class: 'stage-caption' }, h('b', {}, `${this.stages[this.stage].name}. `), this.caption(state, correction)),
-      this.branchRows(state),
+      this.outcomes(state),
       this.controls());
   }
 }
@@ -615,15 +608,53 @@ class QecSuppression extends Base {
     if (this.dataset.ready) return;
     this.dataset.ready = '1';
     setup(this);
+    this.code = getCode(attr(this, 'code', 'two-qubit'));
+    this.n = this.code.n;
+    // two-qubit: detect and discard (eq. 24); odd n: correct by lookup table
+    this.correct = this.n % 2 === 1;
     this.p = Number(attr(this, 'p', '0.1'));
     this.hoverP = null;
     this.id ||= nextId('sp');
+    this.rows = this.code.errorTable(['X']).map((r) => ({ ...r, effect: this.effect(r) }));
     this.build();
     this.update();
   }
 
-  static pL(p) { return p * p / ((1 - p) ** 2 + p * p); }
-  static pDetect(p) { return 2 * p * (1 - p); }
+  /** What syndrome extraction (and, for a correcting code, recovery) does to one term of E^{⊗n}. */
+  effect(r) {
+    const c = this.code.classify(r.error);
+    if (c.kind === 'identity') return { text: 'nothing', fails: false };
+    if (c.kind === 'logical') return { text: 'logical X̄, undetected', fails: true };
+    if (!this.correct) return { text: 'detected, run discarded', fails: false, discarded: true };
+    const corr = this.code.lookupDecoder(['X']).get(r.syndrome);
+    const rc = this.code.classify(r.error.mul(corr));
+    return rc.kind === 'logical'
+      ? { text: `decoder applies ${corr.toLabelled(this.code.labels)}: logical X̄`, fails: true }
+      : { text: `corrected by ${corr.toLabelled(this.code.labels)}`, fails: false };
+  }
+
+  /** Weight of a term: |α_I^{n−w} α_X^w|² = (1−p)^{n−w} p^w. */
+  weight(r, p) { return (1 - p) ** (this.n - r.weight) * p ** r.weight; }
+
+  /** Logical error probability: conditional on syndrome 0 when detecting (eq. 24), unconditional when correcting. */
+  pL(p) {
+    let fail = 0, kept = 0;
+    for (const r of this.rows) {
+      const w = this.weight(r, p);
+      if (r.effect.discarded) continue;
+      kept += w;
+      if (r.effect.fails) fail += w;
+    }
+    return this.correct ? fail : fail / kept;
+  }
+
+  pDiscard(p) {
+    return this.rows.filter((r) => r.effect.discarded).reduce((a, r) => a + this.weight(r, p), 0);
+  }
+
+  get formula() {
+    return this.correct ? 'p_L = 3p² − 2p³' : 'p_L = p² / ((1−p)² + p²)';
+  }
 
   build() {
     const W = 520, H = 300, L = 54, R = 16, T = 14, B = 44;
@@ -631,27 +662,29 @@ class QecSuppression extends Base {
     const x = (p) => L + (p / xmax) * (W - L - R);
     const y = (v) => T + (1 - v / xmax) * (H - T - B);
     this.geom = { W, H, L, R, T, B, x, y, xmax };
+    const f = (p) => this.pL(p);
+    const encLabel = this.correct ? `${this.code.name}, corrected: p_L` : 'two-qubit code, syndrome 0: p_L';
 
     const grid = [0, 0.1, 0.2, 0.3, 0.4, 0.5].flatMap((t) => [
       svg('line', { x1: x(0), x2: x(xmax), y1: y(t), y2: y(t), class: 'grid' }),
       svg('text', { x: x(0) - 8, y: y(t) + 4, 'text-anchor': 'end', class: 'tick' }, t.toFixed(1)),
       svg('text', { x: x(t), y: y(0) + 18, 'text-anchor': 'middle', class: 'tick' }, t.toFixed(1)),
     ]);
-    const path = (f) => Array.from({ length: 101 }, (_, k) => { const p = (k / 100) * xmax; return `${x(p).toFixed(1)},${y(f(p)).toFixed(1)}`; }).join(' ');
+    const path = (g) => Array.from({ length: 101 }, (_, k) => { const p = (k / 100) * xmax; return `${x(p).toFixed(1)},${y(g(p)).toFixed(1)}`; }).join(' ');
 
     this.cross = svg('line', { x1: 0, x2: 0, y1: y(0), y2: y(xmax), class: 'crosshair' });
     this.dotRef = svg('circle', { r: 4.5, class: 'dot dot-ref' });
     this.dotEnc = svg('circle', { r: 4.5, class: 'dot dot-enc' });
 
     this.svg = svg('svg', { viewBox: `0 0 ${W} ${H}`, class: 'chart', role: 'img',
-      'aria-label': 'Logical error probability of the two-qubit code after a syndrome of 0, against the physical bit-flip probability, compared with an unencoded qubit' },
+      'aria-label': `Logical error probability of the ${this.code.name} (${this.formula}) against the physical bit-flip probability, compared with an unencoded qubit` },
       grid,
       svg('text', { x: (x(0) + x(xmax)) / 2, y: H - 6, 'text-anchor': 'middle', class: 'axis' }, 'physical bit-flip probability p'),
       svg('text', { x: 13, y: (y(0) + y(xmax)) / 2, 'text-anchor': 'middle', class: 'axis', transform: `rotate(-90 13 ${(y(0) + y(xmax)) / 2})` }, 'error probability'),
       svg('polyline', { points: path((p) => p), class: 'line line-ref' }),
-      svg('polyline', { points: path(QecSuppression.pL), class: 'line line-enc' }),
+      svg('polyline', { points: path(f), class: 'line line-enc' }),
       svg('text', { x: x(0.17), y: y(0.17) - 9, 'text-anchor': 'middle', class: 'dlabel' }, 'unencoded: p'),
-      svg('text', { x: x(0.33), y: y(QecSuppression.pL(0.33)) + 16, 'text-anchor': 'middle', class: 'dlabel' }, 'two-qubit code, syndrome 0: p_L'),
+      svg('text', { x: x(0.33), y: y(f(0.33)) + 16, 'text-anchor': 'middle', class: 'dlabel' }, encLabel),
       this.cross, this.dotRef, this.dotEnc,
       svg('rect', { x: x(0), y: y(xmax), width: x(xmax) - x(0), height: y(0) - y(xmax), fill: 'transparent',
         onpointermove: (e) => { const r = this.svg.getBoundingClientRect(); const px = (e.clientX - r.left) * (W / r.width); this.hoverP = Math.round(Math.min(xmax, Math.max(0, ((px - L) / (W - L - R)) * xmax)) * 200) / 200; this.update(); },
@@ -661,57 +694,67 @@ class QecSuppression extends Base {
     this.terms = h('tbody');
     this.readout = h('p', { class: 'readout-line' });
     this.tableBody = h('tbody');
+    const factors = Array.from({ length: this.n }, (_, i) => `E${subscript(i + 1)}`).join(' ⊗ ');
+    const title = this.correct ? 'Error suppression by correction' : 'Error suppression by detection';
 
     this.replaceChildren(
-      header(this, 'Error suppression by detection', 'Move the slider, or hover the plot.'),
+      header(this, title, 'Move the slider, or hover the plot.'),
       slider('p =', { id: `${this.id}-p`, min: 0, max: 0.5, step: 0.005, value: this.p, format: (v) => v.toFixed(3), oninput: (v) => { this.p = v; this.update(); } }),
       h('div', { class: 'scroll' }, h('table', { class: 'w-table terms' },
-        h('thead', {}, h('tr', {}, h('th', {}, 'term of E₁ ⊗ E₂ (eq. 21)'), h('th', {}, 'coefficient'), h('th', {}, 'value'), h('th', {}, 'syndrome'), h('th', {}, 'effect on |ψ⟩ᴸ'))),
+        h('thead', {}, h('tr', {}, h('th', {}, `term of ${factors}${this.correct ? '' : ' (eq. 21)'}`), h('th', {}, 'coefficient'), h('th', {}, 'value'), h('th', {}, 'syndrome'), h('th', {}, 'effect on |ψ⟩ᴸ'))),
         this.terms)),
       this.readout,
       h('div', { class: 'legend' },
         h('span', {}, h('i', { class: 'key key-ref' }), 'unencoded qubit: p'),
-        h('span', {}, h('i', { class: 'key key-enc' }), 'two-qubit code, given syndrome 0: p_L = p² / ((1−p)² + p²)')),
+        h('span', {}, h('i', { class: 'key key-enc' }), this.correct ? `${this.code.name} with the lookup decoder: ${this.formula}` : `two-qubit code, given syndrome 0: ${this.formula}`)),
       h('div', { class: 'chartwrap' }, this.svg, this.tip),
       h('details', {}, h('summary', {}, 'Values as a table'),
-        h('table', { class: 'w-table' }, h('thead', {}, h('tr', {}, h('th', {}, 'p'), h('th', {}, 'P(syndrome 1)'), h('th', {}, 'p_L given syndrome 0'), h('th', {}, 'p / p_L'))), this.tableBody)));
+        h('table', { class: 'w-table' }, h('thead', {}, h('tr', {}, h('th', {}, 'p'),
+          this.correct ? null : h('th', {}, 'P(syndrome 1)'),
+          h('th', {}, this.correct ? 'p_L after correction' : 'p_L given syndrome 0'), h('th', {}, 'p / p_L'))), this.tableBody)));
   }
 
   update() {
     const p = this.hoverP ?? this.p;
     const { x, y, W, L, R } = this.geom;
-    const pL = QecSuppression.pL(p), pd = QecSuppression.pDetect(p);
-    const aI = Math.sqrt(1 - p), aX = Math.sqrt(p);
+    const pL = this.pL(p);
     this.cross.setAttribute('x1', x(p)); this.cross.setAttribute('x2', x(p));
     this.dotRef.setAttribute('cx', x(p)); this.dotRef.setAttribute('cy', y(p));
     this.dotEnc.setAttribute('cx', x(p)); this.dotEnc.setAttribute('cy', y(pL));
     this.tip.replaceChildren(
       h('div', { class: 'tip-x' }, `p = ${p.toFixed(3)}`),
       h('div', {}, h('i', { class: 'key key-ref' }), h('b', {}, fmt(p, 4)), ' unencoded'),
-      h('div', {}, h('i', { class: 'key key-enc' }), h('b', {}, fmt(pL, 4)), ' two-qubit code'));
+      h('div', {}, h('i', { class: 'key key-enc' }), h('b', {}, fmt(pL, 4)), ` ${this.code.name.toLowerCase()}`));
     const frac = (x(p) - L) / (W - L - R);
     this.tip.style.left = `${(x(p) / W) * 100}%`;
     this.tip.style.transform = frac > 0.55 ? 'translate(calc(-100% - 12px), 0)' : 'translate(12px, 0)';
-    const pp = this.p;
-    const aI2 = 1 - pp, aX2 = pp, aIX = Math.sqrt(pp * (1 - pp));
-    const rows = [
-      ['𝟙₁𝟙₂', 'α_I²', aI2, '0', 'nothing'],
-      ['X₁', 'α_I α_X', aIX, '1', 'detected'],
-      ['X₂', 'α_I α_X', aIX, '1', 'detected'],
-      ['X₁X₂', 'α_X²', aX2, '0', 'logical X̄, undetected'],
-    ];
-    this.terms.replaceChildren(...rows.map(([t, c, v, s, e]) => h('tr', { class: s === '1' ? 'lit' : '' },
-      h('td', { class: 'mono' }, t), h('td', { class: 'mono' }, c), h('td', { class: 'mono' }, fmt(v, 3)), h('td', { class: 'mono' }, s), h('td', {}, e))));
-    const pLp = QecSuppression.pL(pp), pdp = QecSuppression.pDetect(pp);
-    this.readout.replaceChildren(
-      `At p = ${pp.toFixed(3)}: α_I = ${fmt(Math.sqrt(1 - pp), 3)}, α_X = ${fmt(Math.sqrt(pp), 3)}. The syndrome reads 1 with probability 2α_I²α_X² = ${fmt(pdp, 3)}, and the state is discarded. `,
-      `When it reads 0, the state is ∝ (α_I²·𝟙 + α_X²·X₁X₂)|ψ⟩ᴸ, so the logical error probability is p_L = α_X⁴ / (α_I⁴ + α_X⁴) = ${fmt(pLp, 4)}`,
-      pp > 0 ? `, ${(pp / pLp).toFixed(1)}× below the unencoded p.` : '.');
+
+    const pp = this.p, n = this.n;
+    const coef = (w) => [n - w > 0 ? `α_I${n - w > 1 ? superscript(n - w) : ''}` : '', w > 0 ? `α_X${w > 1 ? superscript(w) : ''}` : ''].filter(Boolean).join(' ');
+    this.terms.replaceChildren(...this.rows.map((r) => h('tr', { class: r.effect.fails ? 'is-logical' : (r.effect.discarded ? 'lit' : '') },
+      h('td', { class: 'mono' }, r.weight ? r.label : Array.from({ length: n }, (_, i) => `𝟙${subscript(i + 1)}`).join('')),
+      h('td', { class: 'mono' }, coef(r.weight)),
+      h('td', { class: 'mono' }, fmt(Math.sqrt(this.weight(r, pp)), 3)),
+      h('td', { class: 'mono' }, r.syndrome), h('td', {}, r.effect.text))));
+    const pLp = this.pL(pp);
+    const ratio = pp > 0 ? `, ${(pp / pLp).toFixed(1)}× below the unencoded p.` : '.';
+    if (this.correct) {
+      this.readout.replaceChildren(
+        `At p = ${pp.toFixed(3)}: α_I = ${fmt(Math.sqrt(1 - pp), 3)}, α_X = ${fmt(Math.sqrt(pp), 3)}. Every run is kept. The decoder undoes the three single flips; the three double flips and X₁X₂X₃ end as X̄, with total weight 3α_I²α_X⁴ + α_X⁶ = 3p²(1−p) + p³, so p_L = 3p² − 2p³ = ${fmt(pLp, 4)}`, ratio);
+    } else {
+      this.readout.replaceChildren(
+        `At p = ${pp.toFixed(3)}: α_I = ${fmt(Math.sqrt(1 - pp), 3)}, α_X = ${fmt(Math.sqrt(pp), 3)}. The syndrome reads 1 with probability 2α_I²α_X² = ${fmt(this.pDiscard(pp), 3)}, and the run is discarded. `,
+        `When it reads 0, the state is ∝ (α_I²·𝟙 + α_X²·X₁X₂)|ψ⟩ᴸ, so the logical error probability is p_L = α_X⁴ / (α_I⁴ + α_X⁴) = ${fmt(pLp, 4)}`, ratio);
+    }
     this.tableBody.replaceChildren(...[0.01, 0.02, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5].map((q) => h('tr', {},
-      h('td', { class: 'mono' }, q.toFixed(2)), h('td', { class: 'mono' }, fmt(QecSuppression.pDetect(q), 4)),
-      h('td', { class: 'mono' }, fmt(QecSuppression.pL(q), 4)), h('td', { class: 'mono' }, (q / QecSuppression.pL(q)).toFixed(1)))));
+      h('td', { class: 'mono' }, q.toFixed(2)),
+      this.correct ? null : h('td', { class: 'mono' }, fmt(this.pDiscard(q), 4)),
+      h('td', { class: 'mono' }, fmt(this.pL(q), 4)), h('td', { class: 'mono' }, (q / this.pL(q)).toFixed(1)))));
   }
 }
+
+const SUP = { 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
+function superscript(k) { return SUP[k] ?? `^${k}`; }
 
 /* --------------------------------------------- <qec-syndrome-table> */
 
