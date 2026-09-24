@@ -6,7 +6,8 @@ Interactive notes on quantum error correction, served at
 | Note | Topic |
 |---|---|
 | [01-quantum-redundancy.html](01-quantum-redundancy.html) | Quantum redundancy and stabilizer measurement ([Roffe](https://arxiv.org/abs/1907.11157), §3) |
-| [02-stabilizer-codes.html](02-stabilizer-codes.html) | Stabilizer codes: the [[4,2,2]] and Shor codes (Roffe, §4) |
+| [02-stabilizer-formalism.html](02-stabilizer-formalism.html) | The stabilizer formalism and the [[4,2,2]] code (Roffe, §4–4.4) |
+| [03-shor-code.html](03-shor-code.html) | Correcting errors: the Shor code (Roffe, §4.5–4.6) |
 
 Plain HTML with ES-module widgets in `assets/`. There is no build step.
 

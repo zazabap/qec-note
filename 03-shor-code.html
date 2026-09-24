@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Shor Code</title>
+<meta name="description" content="Roffe's sections 4.5 and 4.6: recovery with stabilizer codes, degeneracy, and the Shor [[9,1,3]] code built by concatenation, with the amplitudes drawn in the code's own basis. Part 3 of a set of notes on quantum error correction.">
+<link rel="stylesheet" href="assets/qec.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    tags: 'none',
+    macros: {
+      ket: ['\\left|#1\\right\\rangle', 1],
+      bra: ['\\left\\langle#1\\right|', 1],
+      L: '\\mathrm{L}',
+      I: '\\mathbb{1}',
+      C: '\\mathcal{C}',
+      F: '\\mathcal{F}',
+      H: '\\mathcal{H}',
+      span: '\\operatorname{span}'
+    }
+  },
+  svg: { fontCache: 'global' },
+  options: { ignoreHtmlClass: 'qec-widget', skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+<script type="module" src="assets/widgets.js"></script>
+</head>
+<body>
+<div class="wrap">
+<nav class="top" aria-label="site">
+  <a href="index.html">Contents</a>
+  <a href="https://arxiv.org/abs/1907.11157">Roffe (2019)</a>
+  <a href="https://github.com/zazabap/qec-note">Source</a>
+  <span class="right"><a href="https://zazabap.github.io">zazabap.github.io</a></span>
+</nav>
+<main>
+<p class="crumbs">Notes on quantum error correction · Part 3 · follows Roffe, sections 4.5 and 4.6 · previous: <a href="02-stabilizer-formalism.html">Part 2</a></p>
+<h1>Correcting errors: the Shor code</h1>
+<p class="lead">A stabilizer code with distance three or more can undo errors, not just flag them. This part sets out what a successful recovery means, why several errors may share a syndrome without harm, and builds Shor's nine-qubit code, the first code to correct any single-qubit error. It uses the stabilizer language of <a href="02-stabilizer-formalism.html">part 2</a>. The <a href="#figures">interactive figure</a> is at the end.</p>
+
+<p class="eyebrow">Roffe §4.5</p>
+<h2>Recovery</h2>
+<p>A code of distance \(d = 2t + 1\) corrects \(t\) errors, so codes with \(d \ge 3\) can correct and the \([[4,2,2]]\) code must repeat until it sees a clean syndrome. One cycle is: error \(E\), syndrome extraction, a <em>decoder</em> mapping the syndrome to a recovery \(R\) (paper's figure 6). It succeeds when</p>
+\[
+RE\ket\psi_\L = (+1)\ket\psi_\L ,
+\qquad\text{(eq. 37)}
+\]
+<p>which holds not only for \(R = E^\dagger\) but whenever \(RE\) is a stabilizer, and fails when</p>
+\[
+RE\ket\psi_\L = \bar L\ket\psi_\L
+\qquad\text{(eq. 38)}
+\]
+<p>for a logical operator \(\bar L\): the state is back in the codespace with its information changed. Because success only needs \(RE \in \mathcal S\), several errors may share a syndrome harmlessly; such a code is <em>degenerate</em>.</p>
+
+
+<p class="eyebrow">Roffe §4.6</p>
+<h2>The Shor [[9,1,3]] code</h2>
+<p>Shor's code concatenates two three-qubit codes: the bit-flip code \(\mathcal C_{3b} = \span\{\ket{000}, \ket{111}\}\) with \(\mathcal S_{3b} = \langle Z_1Z_2, Z_2Z_3\rangle\), and the phase-flip code \(\mathcal C_{3p} = \span\{\ket{+++}, \ket{---}\}\) with \(\mathcal S_{3p} = \langle X_1X_2, X_2X_3\rangle\) (eq. 39, 40). Each qubit of the phase-flip code is itself a bit-flip code, \(\ket\pm \mapsto \ket\pm_{3b} = (\ket{000} \pm \ket{111})/\sqrt2\) (eq. 41, 42), giving</p>
+\[
+\ket0_9 = \tfrac{1}{\sqrt8}\,(\ket{000} + \ket{111})^{\otimes3},\qquad
+\ket1_9 = \tfrac{1}{\sqrt8}\,(\ket{000} - \ket{111})^{\otimes3},
+\qquad\text{(eq. 43)}
+\]
+\[
+\mathcal S_{[[9,1,3]]} = \langle Z_1Z_2,\, Z_2Z_3,\, Z_4Z_5,\, Z_5Z_6,\, Z_7Z_8,\, Z_8Z_9,\, X_1X_2X_3X_4X_5X_6,\, X_4X_5X_6X_7X_8X_9 \rangle .
+\qquad\text{(eq. 44)}
+\]
+<p>The six \(Z\)-type generators locate a bit flip within its block; the two \(X\)-type ones compare the signs of neighbouring blocks and so locate a phase flip to a block. Every single-qubit \(X\) error has its own syndrome, but \(Z_1, Z_2, Z_3\) share one (table 4). That costs nothing: if the decoder answers \(Z_1\) to an actual \(Z_2\), then \(RE = Z_1Z_2 \in \mathcal S\) and eq. 37 holds. The code corrects every single-qubit error and has \(d = 3\). The paper does not list logical operators; with eq. 43 they are \(\bar X = Z_1Z_4Z_7\), which flips the sign of every block, and \(\bar Z = X_1X_2X_3\), which reads the sign of one block.</p>
+<aside class="note">
+<p><strong>Typo in the paper.</strong> Eq. 44 labels the stabilizer group \(\mathcal S_{[[9,3,3]]}\); the code is \([[9,1,3]]\).</p>
+</aside>
+<aside class="note">
+<p><strong>A caveat on eq. 34</strong> (encoding by projection, <a href="02-stabilizer-formalism.html">part 2</a>). Projecting onto the stabilizers fixes the codespace but not the logical value. It returns \(\ket0_\L\) only when \(\ket{0^{\otimes n}}\) is already a \(+1\) eigenstate of every \(\bar Z_i\), which holds when the \(\bar Z_i\) are made of \(Z\) operators, as for the \([[4,2,2]]\) code. For the Shor code with the codewords of eq. 43, \(\bar Z = X_1X_2X_3\), and eq. 34 gives \(\ket+_\L = (\ket0_\L + \ket1_\L)/\sqrt2\). Adding the projector \((\I + \bar Z)\) repairs it; the projection part of the figure below shows both steps.</p>
+</aside>
+<p>From here the paper turns to the surface code. These notes take a detour first: CSS codes, of which Shor's code is one, since its generators are each made of only \(X\)s or only \(Z\)s.</p>
+
+<h2 id="figures">Interactive figure</h2>
+<p>Click a qubit to cycle through \(X\), \(Z\) and \(Y\) errors, or click a table row; the parts share one error. As in <a href="02-stabilizer-formalism.html">part 2</a>, the bars are drawn in the code's logical basis, in \(\C\) and in the error space \(R\cdot\C\) the syndrome points to. For a degenerate pair such as \(Z_1\) and \(Z_2\) the bars are the same, which is why one recovery serves both. The figure opens with \(Z_2\) applied.</p>
+
+<qec-figure code="shor" label="A" error="IZIIIIIII" title="The Shor [[9,1,3]] code">
+  <qec-code-view code="shor" allowed="XZY" groups="3,3,3" decoder title="Errors, meters, decoder, and the amplitudes in the logical basis"></qec-code-view>
+  <qec-syndrome-table code="shor" errors="XZY" max-weight="1" decoder title="Every single-qubit error (paper's table 4, with Y)"></qec-syndrome-table>
+  <qec-projection code="shor" groups="3,3,3" title="The codewords by projection, with the missing logical step"></qec-projection>
+</qec-figure>
+</main>
+<footer>
+<p>Part 3 of <a href="index.html">Notes on quantum error correction</a>, by Shiwen An. The structure follows Joschka Roffe, <em>Quantum error correction: an introductory guide</em>, Contemporary Physics 60, 226 (2019), <a href="https://arxiv.org/abs/1907.11157">arXiv:1907.11157</a>, sections 4.5 and 4.6; equation numbers in the margins refer to it. The text, figures and code here are original. Text under CC BY 4.0, code under the MIT licence. Revised 23 September 2026.</p>
+</footer>
+</div>
+</body>
+</html>
