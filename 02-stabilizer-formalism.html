@@ -102,10 +102,10 @@ E\ket\psi_\L\ket0_{A_i} \;\longmapsto\;
 <p>Eq. 34 fixes the codespace but not, in general, the logical value; for the \([[4,2,2]]\) code the two coincide. <a href="03-shor-code.html">Part 3</a> shows a code where they do not.</p>
 
 <h2 id="figures">Interactive figure</h2>
-<p>Click a qubit to cycle through \(X\), \(Z\) and \(Y\) errors, or click a table row; the parts share one error. The bars are drawn in the code's own basis: the codespace \(\C\) in its logical basis \(\ket{j}_\L\), and the error space the syndrome points to as \(R\cdot\C\), where \(R\) is the lightest error with that syndrome. So the bars show what the error did to the <em>encoded</em> information: identical to the input when undoing \(R\) would recover it, visibly changed when it would not. Try \(X_1\), then \(X_2\): same syndrome, different logical content. \(Y\) is applied as \(ZX = iY\); the global phase is invisible.</p>
+<p>Part A.1 is the circuit of the paper's figure 5: an encoder for two data qubits, the error, and the measurement of \(Z_1Z_2Z_3Z_4\) and \(X_1X_2X_3X_4\) with one ancilla each; step through it gate by gate. Click a qubit to cycle through \(X\), \(Z\) and \(Y\) errors, or click a table row; the parts share one error. The bars are drawn in the code's own basis: the codespace \(\C\) in its logical basis \(\ket{j}_\L\), and the error space the syndrome points to as \(R\cdot\C\), where \(R\) is the lightest error with that syndrome. So the bars show what the error did to the <em>encoded</em> information: identical to the input when undoing \(R\) would recover it, visibly changed when it would not. Try \(X_1\), then \(X_2\): same syndrome, different logical content. \(Y\) is applied as \(ZX = iY\); the global phase is invisible.</p>
 
 <qec-figure code="four-two-two" label="A" error="XIII" title="The [[4,2,2]] detection code">
-  <qec-code-view code="four-two-two" allowed="XZY" title="Errors, meters, and the amplitudes in the logical basis"></qec-code-view>
+  <qec-circuit code="four-two-two" allowed="XZY" logical title="Encoder, error and syndrome extraction (paper's figure 5)"></qec-circuit>
   <qec-syndrome-table code="four-two-two" errors="XZY" max-weight="1" title="Every single-qubit error (paper's table 3)"></qec-syndrome-table>
   <qec-projection code="four-two-two" title="The codewords by projection (eq. 34, 35)"></qec-projection>
 </qec-figure>

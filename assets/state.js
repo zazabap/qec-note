@@ -227,21 +227,25 @@ export class State {
   branches(qubits) {
     const rest = [];
     for (let q = 0; q < this.n; q++) if (!qubits.includes(q)) rest.push(q);
+    const qm = qubits.map((q) => this.mask(q)), rm = rest.map((q) => this.mask(q));
+    const nq = qubits.length, nr = rest.length;
+    const probs = new Float64Array(1 << nq);
+    const amps = new Map();
+    for (let i = 0; i < this.dim; i++) {
+      const v = this.a[i];
+      if (v === 0) continue;
+      let bb = 0, r = 0;
+      for (let k = 0; k < nq; k++) bb = (bb << 1) | ((i & qm[k]) ? 1 : 0);
+      for (let k = 0; k < nr; k++) r = (r << 1) | ((i & rm[k]) ? 1 : 0);
+      let arr = amps.get(bb);
+      if (!arr) { arr = new Float64Array(1 << nr); amps.set(bb, arr); }
+      arr[r] = v;
+      probs[bb] += v * v;
+    }
     const outcomes = [];
-    for (let b = 0; b < 1 << qubits.length; b++) {
-      const amps = new Float64Array(1 << rest.length);
-      let prob = 0;
-      for (let i = 0; i < this.dim; i++) {
-        let match = true;
-        qubits.forEach((q, k) => { if (this.bit(i, q) !== ((b >> (qubits.length - 1 - k)) & 1)) match = false; });
-        if (!match) continue;
-        let r = 0;
-        rest.forEach((q, k) => { r |= this.bit(i, q) << (rest.length - 1 - k); });
-        amps[r] = this.a[i];
-        prob += this.a[i] * this.a[i];
-      }
-      const bits = b.toString(2).padStart(qubits.length, '0');
-      outcomes.push({ bits, prob, state: prob > 1e-12 ? new State(rest.length, amps).normalize() : null });
+    for (let bb = 0; bb < 1 << nq; bb++) {
+      const prob = probs[bb];
+      outcomes.push({ bits: bb.toString(2).padStart(nq, '0'), prob, state: prob > 1e-12 ? new State(nr, amps.get(bb)).normalize() : null });
     }
     return outcomes;
   }
@@ -294,6 +298,27 @@ export function encode(code, psi) {
   for (const g of code.extra.encoder ?? []) {
     if (g.gate === 'cnot') s = s.cnot(g.control, g.target);
     else if (g.gate === 'h') s = s.h(g.target);
+    else throw new Error(`unknown encoder gate ${g.gate}`);
+  }
+  return s;
+}
+
+/**
+ * Run a code's encoder on a product input: `inputs[i]` (a one-qubit State)
+ * on the i-th data qubit listed in code.extra.dataQubits (default [0]), |0⟩
+ * on every other qubit.
+ */
+export function encodeInputs(code, inputs) {
+  const data = code.extra.dataQubits ?? [0];
+  const factors = [];
+  for (let q = 0; q < code.n; q++) {
+    const k = data.indexOf(q);
+    factors.push(k >= 0 ? inputs[k] : new State(1));
+  }
+  const s = State.product(...factors);
+  for (const g of code.extra.encoder ?? []) {
+    if (g.gate === 'cnot') s.cnot(g.control, g.target);
+    else if (g.gate === 'h') s.h(g.target);
     else throw new Error(`unknown encoder gate ${g.gate}`);
   }
   return s;

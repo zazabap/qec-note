@@ -48,6 +48,17 @@ export function fourTwoTwoCode() {
       { X: 'X2X3', Z: 'Z2Z4' },
     ],
     description: 'Two logical qubits in four physical ones. Every single-qubit error is detected; none can be located.',
+    extra: {
+      // |ab00⟩ → X̄₁^a X̄₂^b |00⟩ᴸ: parity of the data onto qubit 3, then |+⟩ on
+      // qubit 4 fanned out to qubits 1–3 adds the all-ones pattern.
+      dataQubits: [0, 1],
+      encoder: [
+        { gate: 'cnot', control: 0, target: 2 }, { gate: 'cnot', control: 1, target: 2 },
+        { gate: 'h', target: 3 },
+        { gate: 'cnot', control: 3, target: 0 }, { gate: 'cnot', control: 3, target: 1 }, { gate: 'cnot', control: 3, target: 2 },
+      ],
+      encoderNote: 'Two CNOTs write the parity of the data qubits onto qubit 3, a Hadamard puts qubit 4 in |+⟩, and three CNOTs from qubit 4 add the all-ones pattern. Each input |ab⟩ becomes X̄₁ᵃX̄₂ᵇ|00⟩ᴸ, so the state is Σ c_ab|ab⟩ᴸ with the codewords of eq. 32.',
+    },
   });
 }
 
@@ -67,6 +78,16 @@ export function shorCode() {
     ],
     logicals: [{ X: 'Z1Z4Z7', Z: 'X1X2X3' }],
     description: 'A phase-flip code whose qubits are each a bit-flip code. Corrects any single-qubit error.',
+    extra: {
+      dataQubits: [0],
+      encoder: [
+        { gate: 'cnot', control: 0, target: 3 }, { gate: 'cnot', control: 0, target: 6 },
+        { gate: 'h', target: 0 }, { gate: 'h', target: 3 }, { gate: 'h', target: 6 },
+        { gate: 'cnot', control: 0, target: 1 }, { gate: 'cnot', control: 3, target: 4 }, { gate: 'cnot', control: 6, target: 7 },
+        { gate: 'cnot', control: 0, target: 2 }, { gate: 'cnot', control: 3, target: 5 }, { gate: 'cnot', control: 6, target: 8 },
+      ],
+      encoderNote: 'CNOTs from qubit 1 to qubits 4 and 7 make a three-qubit code, Hadamards turn its |0⟩, |1⟩ into |+⟩, |−⟩ (the phase-flip code), and CNOTs inside each block make every |±⟩ a bit-flip code |±⟩₃ᵦ (eq. 41, 42). The result is α|0⟩₉ + β|1⟩₉ with the codewords of eq. 43.',
+    },
   });
 }
 

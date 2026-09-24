@@ -11,7 +11,7 @@
 
 import { Pauli, subscript } from './pauli.js';
 import { getCode } from './codes.js';
-import { State, encode, codewords, subspaces, logicalBasis, encodeLogical } from './state.js';
+import { State, encode, encodeInputs, codewords, subspaces, logicalBasis, encodeLogical } from './state.js';
 
 export { Pauli, getCode, State };
 
@@ -322,7 +322,15 @@ class QecCircuit extends Base {
     this.code = getCode(attr(this, 'code', 'two-qubit'));
     this.n = this.code.n;
     this.m = this.code.stabilizers.length;
-    this.theta = Number(attr(this, 'theta', DEFAULT_THETA));
+    this.k = this.code.logicals.length;
+    this.dataQubits = this.code.extra.dataQubits ?? [0];
+    const defaults = [DEFAULT_THETA, 2 * Math.atan2(0.28, 0.96)];
+    this.thetas = attr(this, 'theta', '') ? attr(this, 'theta').split(',').map(Number) : defaults.slice(0, this.k);
+    // codes with X-type stabilizers are drawn in their logical basis; repetition codes by computational subspace
+    this.codeBasis = this.code.stabilizers.some((g) => g.x.some((b) => b));
+    this.groups = attr(this, 'groups', '').split(',').filter(Boolean).map(Number);
+    const dk = kinds(attr(this, 'decoder', ''));
+    this.decoderKinds = dk.length ? dk : ['X'];
     this.fig = sharedError(this, this.n);
     this.err = this.fig ? this.fig.err
       : attr(this, 'error') ? Pauli.fromString(attr(this, 'error'), this.n) : Pauli.single(this.n, 0, 'X');
@@ -331,7 +339,7 @@ class QecCircuit extends Base {
     this.allowed = kinds(attr(this, 'allowed', 'X'));
     this.p = 0.1;
     this.outcome = null;               // measured syndrome, once sampled
-    this.layout = subspaces(this.code);
+    this.layout = this.codeBasis ? null : subspaces(this.code);
     this.id ||= nextId('cc');
     this.stages = this.buildStages();
     this.stage = 0;
@@ -356,16 +364,27 @@ class QecCircuit extends Base {
     return Array.from({ length: this.m }, (_, k) => this.n + k);
   }
 
+  /** Part 1 widgets read `theta`; keep it as the first input angle. */
+  get theta() { return this.thetas[0]; }
+  set theta(v) { this.thetas[0] = v; }
+
+  inputs() { return this.thetas.map((t) => State.fromAngle(t)); }
+
+  /** The encoded input |ψ⟩ᴸ on the n data qubits. */
+  encodedInput() { return encodeInputs(this.code, this.inputs()); }
+
   /** Recompute the joint state up to and including stage `upto`. */
   compute(upto) {
-    const psi = State.fromAngle(this.theta);
-    let s = State.product(psi, new State(this.n - 1 + this.m));
+    const ins = this.inputs();
+    const factors = [];
+    for (let q = 0; q < this.n; q++) { const j = this.dataQubits.indexOf(q); factors.push(j >= 0 ? ins[j] : new State(1)); }
+    let s = State.product(...factors, new State(this.m));
     let correction = null;
     for (let i = 1; i <= upto; i++) {
       const st = this.stages[i];
       switch (st.id) {
         case 'encode':
-          for (const g of this.code.extra.encoder) s.cnot(g.control, g.target);
+          for (const g of this.code.extra.encoder) { if (g.gate === 'h') s.h(g.target); else s.cnot(g.control, g.target); }
           break;
         case 'error':
           if (this.mode === 'pauli') s.applyPauliUpToPhase(this.err);
@@ -382,8 +401,8 @@ class QecCircuit extends Base {
           s.collapse(this.ancillas, this.outcome);
           break;
         case 'recover': {
-          correction = this.code.lookupDecoder(['X']).get(this.outcome) ?? Pauli.identity(this.n);
-          s.applyPauli(correction);
+          correction = this.code.lookupDecoder(this.decoderKinds).get(this.outcome) ?? Pauli.identity(this.n);
+          s.applyPauliUpToPhase(correction);
           break;
         }
       }
@@ -410,10 +429,20 @@ class QecCircuit extends Base {
     const n = this.n, m = this.m;
     const enc = this.code.extra.encoder;
     const stage = this.stages[this.stage];
-    const colW = 52, left = 54, rowH = 40, top = 30;
-    // columns: encoder gates, error, H, ctrl×m, H, measure, [recover]
+    const big = n + m > 8;
+    const colW = 52, left = 54, rowH = big ? 28 : 40, top = 30;
+    // columns: encoder layers, error, H, ctrl×m, H, measure, [recover]
     const cols = [];
-    enc.forEach((g, i) => cols.push({ kind: 'cnot', gate: g, stage: 'encode', label: i === 0 ? 'Encoder' : null }));
+    const last = new Array(n).fill(-1), layers = [];
+    for (const g of enc) {
+      const lo = g.gate === 'h' ? g.target : Math.min(g.control, g.target), hi = g.gate === 'h' ? g.target : Math.max(g.control, g.target);
+      let col = -1;
+      for (let w = lo; w <= hi; w++) col = Math.max(col, last[w]);
+      col += 1;
+      for (let w = lo; w <= hi; w++) last[w] = col;
+      (layers[col] ??= []).push(g);
+    }
+    layers.forEach((gates) => cols.push({ kind: 'enc', gates, stage: 'encode' }));
     cols.push({ kind: 'error', stage: 'error' });
     cols.push({ kind: 'h', stage: 'h1' });
     for (let k = 0; k < m; k++) cols.push({ kind: 'ctrl', k, stage: 'ctrl' });
@@ -448,21 +477,29 @@ class QecCircuit extends Base {
     // wires and labels
     for (let q = 0; q < n + m; q++) {
       els.push(svg('line', { x1: left - 4, x2: W - 10, y1: wy(q), y2: wy(q), class: 'wire' }));
-      const label = q < n ? (q === 0 ? '|ψ⟩₁' : `|0⟩${subscript(q + 1)}`) : `|0⟩${m > 1 ? 'A' + subscript(q - n + 1) : 'A'}`;
+      const di = this.dataQubits.indexOf(q);
+      const label = q < n ? (di >= 0 ? `|ψ${this.k > 1 ? subscript(di + 1) : ''}⟩${subscript(q + 1)}` : `|0⟩${subscript(q + 1)}`) : `|0⟩${m > 1 ? 'A' + subscript(q - n + 1) : 'A'}`;
       els.push(svg('text', { x: left - 8, y: wy(q) + 4, 'text-anchor': 'end', class: 'wire-label' }, label));
     }
 
     cols.forEach((c, i) => {
       const x = cx(i);
       switch (c.kind) {
-        case 'cnot': {
-          const yc = wy(c.gate.control), yt = wy(c.gate.target);
-          els.push(svg('line', { x1: x, x2: x, y1: yc, y2: yt, class: 'vline' }));
-          els.push(svg('circle', { cx: x, cy: yc, r: 4, class: 'ctrl' }));
-          els.push(svg('circle', { cx: x, cy: yt, r: 7, class: 'target' }));
-          els.push(svg('path', { d: `M${x - 7},${yt} H${x + 7} M${x},${yt - 7} V${yt + 7}`, class: 'target-cross' }));
+        case 'enc':
+          for (const g of c.gates) {
+            if (g.gate === 'h') {
+              const y = wy(g.target);
+              els.push(svg('rect', { x: x - 11, y: y - 11, width: 22, height: 22, class: 'gate' }));
+              els.push(svg('text', { x, y: y + 4, 'text-anchor': 'middle', class: 'gate-label' }, 'H'));
+            } else {
+              const yc = wy(g.control), yt = wy(g.target);
+              els.push(svg('line', { x1: x, x2: x, y1: yc, y2: yt, class: 'vline' }));
+              els.push(svg('circle', { cx: x, cy: yc, r: 4, class: 'ctrl' }));
+              els.push(svg('circle', { cx: x, cy: yt, r: 7, class: 'target' }));
+              els.push(svg('path', { d: `M${x - 7},${yt} H${x + 7} M${x},${yt - 7} V${yt + 7}`, class: 'target-cross' }));
+            }
+          }
           break;
-        }
         case 'error': {
           const y1 = wy(0) - 15, y2 = wy(n - 1) + 15;
           els.push(svg('rect', { x: x - 16, y: y1, width: 32, height: y2 - y1, rx: 3, class: 'ebox' }));
@@ -491,7 +528,11 @@ class QecCircuit extends Base {
           els.push(svg('line', { x1: x, x2: x, y1: ya, y2: y2, class: 'vline' }));
           els.push(svg('circle', { cx: x, cy: ya, r: 4, class: 'ctrl' }));
           els.push(svg('rect', { x: x - 20, y: y1, width: 40, height: y2 - y1, rx: 2, class: 'gate' }));
-          els.push(svg('text', { x, y: (y1 + y2) / 2 + 4, 'text-anchor': 'middle', class: 'gate-label' }, gen.toLabelled(this.code.labels)));
+          if (sup.length > 2 && sup.length * rowH > 60) {
+            for (const q of sup) els.push(svg('text', { x, y: wy(q) + 4, 'text-anchor': 'middle', class: 'gate-label' }, gen.at(q)));
+          } else {
+            els.push(svg('text', { x, y: (y1 + y2) / 2 + 4, 'text-anchor': 'middle', class: 'gate-label' }, gen.toLabelled(this.code.labels)));
+          }
           break;
         }
         case 'measure':
@@ -514,8 +555,9 @@ class QecCircuit extends Base {
       }
     });
 
-    return svg('svg', { viewBox: `0 0 ${W} ${H}`, class: 'circuit', style: { maxWidth: `${W * 1.15}px` }, role: 'img',
+    const out = svg('svg', { viewBox: `0 0 ${W} ${H}`, class: 'circuit', style: W > 720 ? { width: `${W}px`, maxWidth: 'none' } : { maxWidth: `${W * 1.15}px` }, role: 'img',
       'aria-label': `Circuit of the ${this.code.name}: encoder, error stage, and syndrome extraction with ${m} ancilla${m > 1 ? 's' : ''}. Current stage: ${stage.name}.` }, els);
+    return W > 720 ? h('div', { class: 'scroll' }, out) : out;
   }
 
   caption(state, correction) {
@@ -524,9 +566,12 @@ class QecCircuit extends Base {
     const anc = m > 1 ? 'ancillas' : 'ancilla';
     const errName = this.mode === 'pauli' ? this.err.toLabelled(this.code.labels) : `√(1−p)·𝟙 + √p·X on every qubit, p = ${this.p.toFixed(2)}`;
     switch (st.id) {
-      case 'init':
-        return `The data qubit holds |ψ⟩ = ${fmt(Math.cos(this.theta / 2))}|0⟩ + ${fmt(Math.sin(this.theta / 2))}|1⟩. The ${n - 1} redundancy qubit${n > 2 ? 's' : ''} and the ${m} ${anc} start in |0⟩.`;
+      case 'init': {
+        const ins = this.thetas.map((t, j) => `|ψ${this.k > 1 ? subscript(j + 1) : ''}⟩ = ${fmt(Math.cos(t / 2))}|0⟩ + ${fmt(Math.sin(t / 2))}|1⟩`).join(' and ');
+        return `The data qubit${this.k > 1 ? 's hold' : ' holds'} ${ins}. The ${n - this.k} redundancy qubit${n - this.k > 1 ? 's' : ''} and the ${m} ${anc} start in |0⟩.`;
+      }
       case 'encode':
+        if (this.code.extra.encoderNote) return this.code.extra.encoderNote;
         return `CNOTs from qubit 1 spread the amplitudes onto |${'0'.repeat(n)}⟩ and |${'1'.repeat(n)}⟩ (eq. 12). Nothing is copied: the two amplitudes are still α and β, now shared by ${n} qubits. The state lies in the codespace C.`;
       case 'error':
         return this.mode === 'pauli'
@@ -544,14 +589,15 @@ class QecCircuit extends Base {
         return `Measured syndrome S = ${this.outcome} (probability ${fmt(chosen.prob, 3)}). The data collapsed onto the subspace paired with that outcome. Press "Measure again" to resample from the same pre-measurement state.`;
       }
       case 'recover': {
-        const psiL = encode(this.code, State.fromAngle(this.theta));
+        const psiL = this.encodedInput();
         const data = state.branches(this.ancillas).find((b) => b.prob > 1e-9).state;
         const F = data.fidelity(psiL);
-        const XL = psiL.clone().applyPauli(this.code.logicals[0].X);
+        const XL = psiL.clone().applyPauliUpToPhase(this.code.logicals[0].X);
         const FX = data.fidelity(XL);
         const applied = correction && !correction.isIdentity() ? `The lookup table maps S = ${this.outcome} to ${correction.toLabelled(this.code.labels)}, which is applied. ` : `Syndrome ${this.outcome} asks for no correction. `;
         if (this.mode === 'pauli') {
           const r = this.code.classify(this.err.mul(correction ?? Pauli.identity(this.n)));
+          if (r.kind === 'stabilizer' && correction && !correction.isIdentity()) return `${applied}The net effect ${this.err.mul(correction).toLabelled(this.code.labels)} is a stabilizer, so the state is restored even though the correction was not the error itself (degeneracy). Fidelity to |ψ⟩ᴸ: ${fmt(F, 3)}. Recovered.`;
           if (r.kind === 'logical') return `${applied}Fidelity to |ψ⟩ᴸ: ${fmt(F, 3)}. The net effect is a logical ${r.action.join(' ')}${r.action.some((a) => a.startsWith('X̄')) && correction && !correction.isIdentity() ? ': the correction completed a logical bit flip, and the decoder was fooled' : ', which no syndrome can see'}.`;
         }
         if (F > 0.9995) return `${applied}Fidelity to the encoded input |ψ⟩ᴸ: ${fmt(F, 3)}. Recovered.`;
@@ -571,7 +617,7 @@ class QecCircuit extends Base {
     const pre = measured ? this.compute(measureIdx - 1).state.branches(this.ancillas) : br;
     return h('p', { class: 'outcomes' },
       h('span', { class: 'outcomes-name' }, measured ? 'Ancilla outcome:' : 'If measured now:'),
-      pre.map((b) => h('span', { class: `outcome-chip${b.prob < 1e-9 ? ' dead' : ''}${measured && b.bits === this.outcome ? ' chosen' : ''}` },
+      (pre.length > 4 ? pre.filter((b) => b.prob > 1e-9) : pre).map((b) => h('span', { class: `outcome-chip${b.prob < 1e-9 ? ' dead' : ''}${measured && b.bits === this.outcome ? ' chosen' : ''}` },
         h('span', { class: 'mono' }, `S = ${b.bits}`), ` p = ${fmt(b.prob, 3)}`)));
   }
 
@@ -589,6 +635,7 @@ class QecCircuit extends Base {
 
   /** The encoded state right after the error stage, with the error panel under it. */
   errorPanel() {
+    if (this.codeBasis) return this.codeBasisPanel();
     const code = this.code;
     const encoded = encode(code, State.fromAngle(this.theta));
     const errIdx = this.stages.findIndex((st) => st.id === 'error');
@@ -615,6 +662,25 @@ class QecCircuit extends Base {
       flag(this, 'logical') ? QecStateView.prototype.logicalReadout.call(this, after) : null);
   }
 
+  /** Error panel for codes with X-type stabilizers: amplitudes in the logical basis (see <qec-code-view>). */
+  codeBasisPanel() {
+    const code = this.code;
+    const psiL = this.encodedInput();
+    const state = psiL.clone().applyPauliUpToPhase(this.err);
+    const c = code.classify(this.err);
+    const syn = Array.from(c.syndrome).join('');
+    const { svg: chart, R } = QecCodeView.prototype.chart.call(this, state, syn);
+    const hint = `Click a qubit to cycle ${['no error', ...this.allowed].join(' → ')}.`;
+    return h('div', { class: 'error-panel' },
+      h('p', { class: 'panel-head' }, h('b', {}, 'Error E and the encoded state after it'), ' ', h('span', { class: 'w-hint' }, hint)),
+      h('p', { class: 'w-meta' }, h('span', { class: 'mono' }, code.params()), ' · logical operators ',
+        code.logicals.map((l, j) => { const sub = this.k > 1 ? subscript(j + 1) : ''; return `X̄${sub} = ${l.X.toLabelled(code.labels)}, Z̄${sub} = ${l.Z.toLabelled(code.labels)}`; }).join('; ')),
+      h('div', { class: 'w-row' }, qubitButtons(code, this.err, this.allowed, (i) => this.cycle(i), this.groups), meters(code, c.syndrome)),
+      chart,
+      h('p', { class: `status is-${c.kind}` }, QecCodeView.prototype.describe.call(this, c, R)),
+      flag(this, 'decoder') ? QecCodeView.prototype.decoderLine.call(this, c, state, psiL) : null);
+  }
+
   controls() {
     const measureIdx = this.stages.findIndex((s) => s.id === 'measure');
     const code = this.code;
@@ -630,11 +696,12 @@ class QecCircuit extends Base {
   inputControls() {
     const code = this.code;
     return h('div', { class: 'controls' },
-      slider('input |ψ⟩ = cos(θ/2)|0⟩ + sin(θ/2)|1⟩, θ =', { id: `${this.id}-theta`, min: 0, max: Math.PI.toFixed(4), step: 0.01, value: this.theta, format: (v) => `${v.toFixed(2)} rad`,
-        oninput: (v) => { this.theta = v; this.outcome = null; this.render(); } }),
+      this.thetas.map((t, j) => slider(this.k > 1 ? `input |ψ${subscript(j + 1)}⟩: θ${subscript(j + 1)} =` : 'input |ψ⟩ = cos(θ/2)|0⟩ + sin(θ/2)|1⟩, θ =', {
+        id: this.k > 1 ? `${this.id}-theta-${j}` : `${this.id}-theta`, min: 0, max: Math.PI.toFixed(4), step: 0.01, value: t, format: (v) => `${v.toFixed(2)} rad`,
+        oninput: (v) => { this.thetas[j] = v; this.outcome = null; this.render(); } })),
       h('button', { type: 'button', onclick: () => this.setError((e) => assignPauli(e, Pauli.identity(this.n))) }, 'Clear errors'),
-      flag(this, 'logical') ? ['X', 'Z'].map((op) => h('button', { type: 'button', onclick: () => this.setError((e) => assignPauli(e, e.mul(code.logicals[0][op]))) },
-        `Apply ${op}̄ = ${code.logicals[0][op].toLabelled(code.labels)}`)) : null,
+      flag(this, 'logical') ? code.logicals.flatMap((l, j) => ['X', 'Z'].map((op) => h('button', { type: 'button', onclick: () => this.setError((e) => assignPauli(e, e.mul(l[op]))) },
+        `Apply ${op}̄${this.k > 1 ? subscript(j + 1) : ''} = ${l[op].toLabelled(code.labels)}`))) : null,
       flag(this, 'coherent') ? h('button', { type: 'button', class: `chip${this.mode === 'coherent' ? ' on' : ''}`, 'aria-pressed': this.mode === 'coherent',
         onclick: () => { this.mode = this.mode === 'coherent' ? 'pauli' : 'coherent'; this.outcome = null; this.render(); } }, 'coherent error (eq. 20)') : null,
       flag(this, 'coherent') && this.mode === 'coherent' ? slider('p =', { id: `${this.id}-p`, min: 0, max: 0.5, step: 0.01, value: this.p, format: (v) => v.toFixed(2),

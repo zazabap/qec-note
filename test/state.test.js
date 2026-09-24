@@ -138,3 +138,31 @@ test('Y applied up to a global phase gives the right syndrome subspace', () => {
   close(s.expect(code.stabilizers[0]), -1);
   close(s.expect(code.stabilizers[1]), -1);
 });
+
+import { encodeInputs } from '../assets/state.js';
+
+test('the [[4,2,2]] and Shor encoders produce the codewords of eq. 32 and 43', () => {
+  for (const name of ['four-two-two', 'shor']) {
+    const code = getCode(name);
+    const k = code.logicals.length;
+    const basis = logicalBasis(code);
+    for (let j = 0; j < 1 << k; j++) {
+      const inputs = Array.from({ length: k }, (_, b) => State.basis(String((j >> (k - 1 - b)) & 1)));
+      close(encodeInputs(code, inputs).fidelity(basis[j]), 1);
+      assert.ok(encodeInputs(code, inputs).overlap(basis[j]) > 0.999, `${name} |${j}⟩ sign`);
+    }
+  }
+});
+
+test('syndrome extraction on the Shor code (17 qubits) gives the Pauli-frame syndrome', () => {
+  const code = getCode('shor');
+  for (const e of ['Z2', 'X5', 'Y9']) {
+    const err = Pauli.fromString(e, 9);
+    let s = State.product(encodeInputs(code, [State.fromAngle(1.1)]), new State(8));
+    s.applyPauliUpToPhase(err);
+    for (let k = 0; k < 8; k++) { s.h(9 + k); s.controlledPauli(9 + k, code.stabilizers[k]); s.h(9 + k); }
+    const live = s.branches([9, 10, 11, 12, 13, 14, 15, 16]).filter((b) => b.prob > 1e-9);
+    assert.equal(live.length, 1);
+    assert.equal(live[0].bits, code.syndromeString(err), e);
+  }
+});

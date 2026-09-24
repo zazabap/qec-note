@@ -75,6 +75,7 @@ button.qubit { background: none; border: 0; padding: 0; display: flex; flex-dire
 .qubit-face { width: 2.75rem; height: 2.75rem; border-radius: 50%; border: 2px solid var(--ink); display: grid; place-items: center; font-weight: 700; font-size: 1.05rem; background: var(--paper); color: var(--muted); }
 .qubit.op-X .qubit-face { background: var(--x); border-color: var(--x); color: #fff; }
 .qubit.op-Z .qubit-face { background: var(--z); border-color: var(--z); color: #fff; }
+.qubit.op-Y .qubit-face { background: linear-gradient(135deg, var(--x) 50%, var(--z) 50%); border-color: var(--ink); color: #fff; }
 .qubit-idx { font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
 .qubit:hover .qubit-face { box-shadow: 0 0 0 3px var(--tint); }
 
@@ -140,6 +141,7 @@ summary { cursor: pointer; color: var(--muted); }
 .circuit .gate-label.muted { fill: var(--muted); font-weight: 400; }
 .circuit .err-X { fill: var(--x); }
 .circuit .err-Z { fill: var(--z); }
+.circuit .err-Y { fill: var(--ink); }
 .circuit .ctrl { fill: var(--ink); }
 .circuit .target { fill: var(--paper); stroke: var(--ink); stroke-width: 1.2; }
 .circuit .target-cross, .circuit .vline { stroke: var(--ink); stroke-width: 1.2; fill: none; }

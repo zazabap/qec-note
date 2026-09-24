@@ -80,10 +80,10 @@ RE\ket\psi_\L = \bar L\ket\psi_\L
 <p>From here the paper turns to the surface code. These notes take a detour first: CSS codes, of which Shor's code is one, since its generators are each made of only \(X\)s or only \(Z\)s.</p>
 
 <h2 id="figures">Interactive figure</h2>
-<p>Click a qubit to cycle through \(X\), \(Z\) and \(Y\) errors, or click a table row; the parts share one error. As in <a href="02-stabilizer-formalism.html">part 2</a>, the bars are drawn in the code's logical basis, in \(\C\) and in the error space \(R\cdot\C\) the syndrome points to. For a degenerate pair such as \(Z_1\) and \(Z_2\) the bars are the same, which is why one recovery serves both. The figure opens with \(Z_2\) applied.</p>
+<p>Part A.1 runs one full correction cycle of the paper's figure 6 on the Shor code: the encoder of eq. 41–43, the error, eight stabilizer measurements with one ancilla each, and the lookup-table recovery. It simulates all 17 qubits. Click a qubit to cycle through \(X\), \(Z\) and \(Y\) errors, or click a table row; the parts share one error. As in <a href="02-stabilizer-formalism.html">part 2</a>, the bars are drawn in the code's logical basis, in \(\C\) and in the error space \(R\cdot\C\) the syndrome points to. For a degenerate pair such as \(Z_1\) and \(Z_2\) the bars are the same, which is why one recovery serves both. The figure opens with \(Z_2\) applied.</p>
 
 <qec-figure code="shor" label="A" error="IZIIIIIII" title="The Shor [[9,1,3]] code">
-  <qec-code-view code="shor" allowed="XZY" groups="3,3,3" decoder title="Errors, meters, decoder, and the amplitudes in the logical basis"></qec-code-view>
+  <qec-circuit code="shor" allowed="XZY" groups="3,3,3" decoder="XZY" logical title="Encoder, error, syndrome extraction and recovery (paper's figure 6)"></qec-circuit>
   <qec-syndrome-table code="shor" errors="XZY" max-weight="1" decoder title="Every single-qubit error (paper's table 4, with Y)"></qec-syndrome-table>
   <qec-projection code="shor" groups="3,3,3" title="The codewords by projection, with the missing logical step"></qec-projection>
 </qec-figure>
