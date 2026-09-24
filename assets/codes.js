@@ -33,14 +33,53 @@ export function repetitionCode(n) {
   });
 }
 
+/**
+ * The [[4,2,2]] detection code (paper §4.3). Generators are listed Z-type
+ * first so that syndromes read as in table 3 (X errors give 10, Z errors 01);
+ * logical operators are those of eq. 33.
+ */
+export function fourTwoTwoCode() {
+  return new StabilizerCode({
+    name: '[[4,2,2]] code',
+    n: 4,
+    stabilizers: ['Z1Z2Z3Z4', 'X1X2X3X4'],
+    logicals: [
+      { X: 'X1X3', Z: 'Z1Z4' },
+      { X: 'X2X3', Z: 'Z2Z4' },
+    ],
+    description: 'Two logical qubits in four physical ones. Every single-qubit error is detected; none can be located.',
+  });
+}
+
+/**
+ * The Shor [[9,1,3]] code (paper §4.6): stabilizers of eq. 44 in that order,
+ * codewords of eq. 43. The paper gives no logical operators; with
+ * |0⟩ = |+⟩₃ᵦ^⊗3 and |1⟩ = |−⟩₃ᵦ^⊗3, X̄ = Z₁Z₄Z₇ flips every block between
+ * |+⟩₃ᵦ and |−⟩₃ᵦ, and Z̄ = X₁X₂X₃ reads the sign of the first block.
+ */
+export function shorCode() {
+  return new StabilizerCode({
+    name: 'Shor [[9,1,3]] code',
+    n: 9,
+    stabilizers: [
+      'Z1Z2', 'Z2Z3', 'Z4Z5', 'Z5Z6', 'Z7Z8', 'Z8Z9',
+      'X1X2X3X4X5X6', 'X4X5X6X7X8X9',
+    ],
+    logicals: [{ X: 'Z1Z4Z7', Z: 'X1X2X3' }],
+    description: 'A phase-flip code whose qubits are each a bit-flip code. Corrects any single-qubit error.',
+  });
+}
+
 const CATALOG = {
   'two-qubit': () => repetitionCode(2),
   'three-qubit': () => repetitionCode(3),
+  'four-two-two': fourTwoTwoCode,
+  shor: shorCode,
 };
 
 const cache = new Map();
 
-/** Look a code up by name: 'two-qubit', 'three-qubit' or 'repetition:n'. */
+/** Look a code up by name: 'two-qubit', 'three-qubit', 'four-two-two', 'shor' or 'repetition:n'. */
 export function getCode(name) {
   if (cache.has(name)) return cache.get(name);
   let code;

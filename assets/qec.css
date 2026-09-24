@@ -161,6 +161,14 @@ summary { cursor: pointer; color: var(--muted); }
 .branch-empty { color: var(--muted); text-align: center; }
 .branch .amp-chart { margin: 0.2rem 0; }
 
+/* code view and projection */
+.qubit-gap { width: 0.9rem; }
+.checks { display: flex; flex-wrap: wrap; gap: 0.35rem 0.5rem; margin: 0.5rem 0; }
+.check { padding: 0.1rem 0.5rem; border: 1px solid var(--rule); border-radius: 3px; font-variant-numeric: tabular-nums; }
+.check.plus { border-color: var(--ok); }
+.check.minus { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.check.mixed { border-style: dashed; color: var(--muted); }
+
 /* ancilla outcomes under the circuit */
 .outcomes { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.6rem; margin: 0.4rem 0; }
 .outcomes-name { color: var(--muted); }

@@ -98,3 +98,43 @@ test('measurement: branches sum to one, collapse renormalises, sampling honours 
   assert.equal(s.sample([1], () => 0.2), '0');
   assert.equal(s.sample([1], () => 0.9), '1');
 });
+
+import { logicalBasis, encodeLogical } from '../assets/state.js';
+
+test('eq. 32 and 35: the [[4,2,2]] codewords, |00⟩ᴸ by projecting |0000⟩', () => {
+  const code = getCode('four-two-two');
+  const b = logicalBasis(code).map((v) => v.toString());
+  assert.deepEqual(b, [
+    '0.707|0000⟩ + 0.707|1111⟩',
+    '0.707|0110⟩ + 0.707|1001⟩',
+    '0.707|0101⟩ + 0.707|1010⟩',
+    '0.707|0011⟩ + 0.707|1100⟩',
+  ]);
+  const s = new State(4);
+  for (const g of code.stabilizers) s.projectPlus(g);
+  assert.equal(s.normalize().toString(), b[0]);
+  for (const v of logicalBasis(code)) for (const g of code.stabilizers) close(v.expect(g), 1);
+});
+
+test('eq. 43: the Shor codewords; eq. 34 alone gives |+⟩ᴸ, not |0⟩ᴸ', () => {
+  const code = getCode('shor');
+  const [zero, one] = logicalBasis(code);
+  assert.equal(zero.toString().split('+').length, 8);
+  close(zero.a[0], 1 / Math.sqrt(8));
+  close(one.a[0b000000111], -1 / Math.sqrt(8));        // (|000⟩ − |111⟩)^⊗3 has sign (−1)^(# of |111⟩ blocks)
+  close(one.a[0b111111111], -1 / Math.sqrt(8));
+  const s = new State(9);
+  for (const g of code.stabilizers) s.projectPlus(g);
+  s.normalize();
+  const plus = encodeLogical(code, [1, 1]);
+  close(s.fidelity(plus), 1);
+  close(s.fidelity(zero), 0.5);
+});
+
+test('Y applied up to a global phase gives the right syndrome subspace', () => {
+  const code = getCode('four-two-two');
+  const [zz] = logicalBasis(code);
+  const s = zz.clone().applyPauliUpToPhase(Pauli.fromString('YIII'));
+  close(s.expect(code.stabilizers[0]), -1);
+  close(s.expect(code.stabilizers[1]), -1);
+});

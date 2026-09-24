@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stabilizer Codes</title>
+<meta name="description" content="The stabilizer formalism of Roffe's section 4: the stabilizer group, logical operators, the [[4,2,2]] detection code, encoding by projection, recovery, and the Shor [[9,1,3]] code, with the amplitudes drawn in each code's own basis. Part 2 of a set of notes on quantum error correction.">
+<link rel="stylesheet" href="assets/qec.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    tags: 'none',
+    macros: {
+      ket: ['\\left|#1\\right\\rangle', 1],
+      bra: ['\\left\\langle#1\\right|', 1],
+      L: '\\mathrm{L}',
+      I: '\\mathbb{1}',
+      C: '\\mathcal{C}',
+      F: '\\mathcal{F}',
+      H: '\\mathcal{H}',
+      span: '\\operatorname{span}'
+    }
+  },
+  svg: { fontCache: 'global' },
+  options: { ignoreHtmlClass: 'qec-widget', skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+<script type="module" src="assets/widgets.js"></script>
+</head>
+<body>
+<div class="wrap">
+<nav class="top" aria-label="site">
+  <a href="index.html">Contents</a>
+  <a href="https://arxiv.org/abs/1907.11157">Roffe (2019)</a>
+  <a href="https://github.com/zazabap/qec-note">Source</a>
+  <span class="right"><a href="https://zazabap.github.io">zazabap.github.io</a></span>
+</nav>
+<main>
+<p class="crumbs">Notes on quantum error correction · Part 2 · follows Roffe, section 4 · previous: <a href="01-quantum-redundancy.html">Part 1</a></p>
+<h1>Stabilizer codes</h1>
+<p class="lead">Part 1 built codes one stabilizer at a time. Section 4 turns the recipe into a framework: a code is a commuting set of Pauli operators, its logical qubits are what those operators leave free, and the syndrome is a list of commutation signs. The theory comes first; the <a href="#figures">interactive figures</a> are gathered at the end.</p>
+
+<p class="eyebrow">Roffe §4</p>
+<h2>The [[n, k, d]] stabilizer code</h2>
+<p>A register of \(k\) data qubits is entangled with \(m = n - k\) redundancy qubits to form \(\ket\psi_\L\) (paper's figure 4), and each of \(m\) stabilizers \(P_i\) is measured with the ancilla circuit of part 1:</p>
+\[
+E\ket\psi_\L\ket0_{A_i} \;\longmapsto\;
+\tfrac12(\I^{\otimes n} + P_i)\,E\ket\psi_\L\ket0_{A_i} + \tfrac12(\I^{\otimes n} - P_i)\,E\ket\psi_\L\ket1_{A_i} .
+\qquad\text{(eq. 29)}
+\]
+<p>Ancilla \(A_i\) reads 0 if \(P_i\) commutes with \(E\) and 1 if it anticommutes, and two Pauli strings anticommute exactly when they differ, both non-trivially, on an odd number of qubits. The \(m\) bits form the syndrome \(S\). Designing a code means choosing stabilizers that anticommute with the errors to be caught.</p>
+
+<p class="eyebrow">Roffe §4.1</p>
+<h2>The stabilizer group</h2>
+<p>The stabilizers must be Pauli operators, \(P_i \in \mathcal G_n\), must fix every code state, \(P_i\ket\psi_\L = \ket\psi_\L\), and must commute with one another so that they can be measured in any order:</p>
+\[
+\mathcal S = \bigl\{ P_i \in \mathcal G_n \;\big|\; P_i\ket\psi_\L = (+1)\ket\psi_\L\ \forall \ket\psi_\L,\ [P_i, P_j] = 0\ \forall i, j \bigr\} .
+\qquad\text{(eq. 30)}
+\]
+<p>Products of stabilizers are stabilizers, so \(\mathcal S\) is an Abelian group, and only a minimal generating set is measured, one in which no generator is a product of the others:</p>
+\[
+\mathcal S = \langle G_1, G_2, \ldots, G_m \rangle .
+\qquad\text{(eq. 31)}
+\]
+<p>For the three-qubit code \(\{Z_1Z_2, Z_2Z_3, Z_1Z_3\}\) is not minimal, since \(Z_1Z_3 = (Z_1Z_2)(Z_2Z_3)\); \(\langle Z_1Z_2, Z_2Z_3\rangle\) is. Each independent generator halves the space it acts on, which is why \(m = n - k\) generators leave a \(2^k\)-dimensional codespace.</p>
+
+<p class="eyebrow">Roffe §4.2</p>
+<h2>Logical operators</h2>
+<p>An \([[n,k,d]]\) code has \(2k\) logical operators \(\bar X_i, \bar Z_i\) that act on the encoded qubits without decoding. Each commutes with every stabilizer, so it maps the codespace to itself, and each pair anticommutes, \(\{\bar X_i, \bar Z_i\} = 0\), as the single-qubit \(X\) and \(Z\) do. Multiplying a logical operator by a stabilizer gives another representative of the same logical operator, \(\bar L P_j\ket\psi_\L = \bar L\ket\psi_\L\). The distance \(d\) is the weight of the lightest representative of any non-trivial logical operator.</p>
+
+<p class="eyebrow">Roffe §4.3</p>
+<h2>The [[4,2,2]] detection code</h2>
+<p>The smallest code that notices both \(X\) and \(Z\) errors encodes two qubits in four, with codespace</p>
+\[
+\ket{00}_\L = \tfrac{1}{\sqrt2}(\ket{0000} + \ket{1111}),\quad
+\ket{01}_\L = \tfrac{1}{\sqrt2}(\ket{0110} + \ket{1001}),\quad
+\ket{10}_\L = \tfrac{1}{\sqrt2}(\ket{1010} + \ket{0101}),\quad
+\ket{11}_\L = \tfrac{1}{\sqrt2}(\ket{1100} + \ket{0011}),
+\qquad\text{(eq. 32)}
+\]
+<p>and stabilizers \(\mathcal S = \langle X_1X_2X_3X_4,\ Z_1Z_2Z_3Z_4 \rangle\). Every single-qubit \(X\) anticommutes with \(Z_1Z_2Z_3Z_4\), every single-qubit \(Z\) with \(X_1X_2X_3X_4\), and \(Y\) with both, so every single-qubit error is detected (table 3). The syndrome depends only on the <em>kind</em> of error, not the qubit, so nothing can be located. A choice of logical operators is</p>
+\[
+\bar X_1 = X_1X_3,\quad \bar Z_1 = Z_1Z_4,\qquad \bar X_2 = X_2X_3,\quad \bar Z_2 = Z_2Z_4 ,
+\qquad\text{(eq. 33)}
+\]
+<p>all of weight two, so \(d = 2\): a detection code. Two errors with the same syndrome differ by a logical operator, for example \(X_1X_2 = \bar X_1\bar X_2\) up to a stabilizer, which is exactly why undoing the wrong one would corrupt the data.</p>
+<aside class="note">
+<p><strong>Ordering.</strong> Table 3 lists \(X\) errors with syndrome 10 and \(Z\) errors with 01, which means \(Z_1Z_2Z_3Z_4\) is measured first, as in the paper's figure 5, although the text writes \(\langle X_1X_2X_3X_4, Z_1Z_2Z_3Z_4\rangle\). The figures below measure \(Z_1Z_2Z_3Z_4\) first so that their syndromes match table 3.</p>
+</aside>
+
+<p class="eyebrow">Roffe §4.4</p>
+<h2>Encoding by projection</h2>
+<p>A codeword can be prepared without a bespoke circuit by projecting onto the \(+1\) eigenspace of every generator,</p>
+\[
+\ket0_\L = \frac1N \prod_{P_i \in \langle\mathcal S\rangle} (\I^{\otimes n} + P_i)\,\ket{0^{\otimes n}},
+\qquad
+\ket{00}_\L = \tfrac{1}{\sqrt2}(\I^{\otimes4} + X_1X_2X_3X_4)(\I^{\otimes4} + Z_1Z_2Z_3Z_4)\ket{0000} = \tfrac{1}{\sqrt2}(\ket{0000} + \ket{1111}),
+\qquad\text{(eq. 34, 35)}
+\]
+<p>and the other codewords follow by applying logical \(\bar X\) operators. In hardware the projection is the syndrome-extraction circuit run on \(\ket{0^{\otimes n}}\); each ancilla then reads 0 or 1 with equal probability, as eq. 36 shows for \(X_1X_2X_3X_4\), and a 1 is fixed by an operator that anticommutes with that stabilizer only.</p>
+<aside class="note">
+<p><strong>A caveat on eq. 34.</strong> Projecting onto the stabilizers fixes the codespace but not the logical value. It returns \(\ket0_\L\) only when \(\ket{0^{\otimes n}}\) is already a \(+1\) eigenstate of every \(\bar Z_i\), which holds when the \(\bar Z_i\) are made of \(Z\) operators, as for the \([[4,2,2]]\) code. For the Shor code with the codewords of eq. 43, \(\bar Z = X_1X_2X_3\), and eq. 34 gives \(\ket+_\L = (\ket0_\L + \ket1_\L)/\sqrt2\). Adding the projector \((\I + \bar Z)\) repairs it; the projection figure for the Shor code shows both steps.</p>
+</aside>
+
+<p class="eyebrow">Roffe §4.5</p>
+<h2>Recovery</h2>
+<p>A code of distance \(d = 2t + 1\) corrects \(t\) errors, so codes with \(d \ge 3\) can correct and the \([[4,2,2]]\) code must repeat until it sees a clean syndrome. One cycle is: error \(E\), syndrome extraction, a <em>decoder</em> mapping the syndrome to a recovery \(R\) (paper's figure 6). It succeeds when</p>
+\[
+RE\ket\psi_\L = (+1)\ket\psi_\L ,
+\qquad\text{(eq. 37)}
+\]
+<p>which holds not only for \(R = E^\dagger\) but whenever \(RE\) is a stabilizer, and fails when</p>
+\[
+RE\ket\psi_\L = \bar L\ket\psi_\L
+\qquad\text{(eq. 38)}
+\]
+<p>for a logical operator \(\bar L\): the state is back in the codespace with its information changed. Because success only needs \(RE \in \mathcal S\), several errors may share a syndrome harmlessly; such a code is <em>degenerate</em>.</p>
+
+<p class="eyebrow">Roffe §4.6</p>
+<h2>The Shor [[9,1,3]] code</h2>
+<p>Shor's code concatenates two three-qubit codes: the bit-flip code \(\mathcal C_{3b} = \span\{\ket{000}, \ket{111}\}\) with \(\mathcal S_{3b} = \langle Z_1Z_2, Z_2Z_3\rangle\), and the phase-flip code \(\mathcal C_{3p} = \span\{\ket{+++}, \ket{---}\}\) with \(\mathcal S_{3p} = \langle X_1X_2, X_2X_3\rangle\) (eq. 39, 40). Each qubit of the phase-flip code is itself a bit-flip code, \(\ket\pm \mapsto \ket\pm_{3b} = (\ket{000} \pm \ket{111})/\sqrt2\) (eq. 41, 42), giving</p>
+\[
+\ket0_9 = \tfrac{1}{\sqrt8}\,(\ket{000} + \ket{111})^{\otimes3},\qquad
+\ket1_9 = \tfrac{1}{\sqrt8}\,(\ket{000} - \ket{111})^{\otimes3},
+\qquad\text{(eq. 43)}
+\]
+\[
+\mathcal S_{[[9,1,3]]} = \langle Z_1Z_2,\, Z_2Z_3,\, Z_4Z_5,\, Z_5Z_6,\, Z_7Z_8,\, Z_8Z_9,\, X_1X_2X_3X_4X_5X_6,\, X_4X_5X_6X_7X_8X_9 \rangle .
+\qquad\text{(eq. 44)}
+\]
+<p>The six \(Z\)-type generators locate a bit flip within its block; the two \(X\)-type ones compare the signs of neighbouring blocks and so locate a phase flip to a block. Every single-qubit \(X\) error has its own syndrome, but \(Z_1, Z_2, Z_3\) share one (table 4). That costs nothing: if the decoder answers \(Z_1\) to an actual \(Z_2\), then \(RE = Z_1Z_2 \in \mathcal S\) and eq. 37 holds. The code corrects every single-qubit error and has \(d = 3\). The paper does not list logical operators; with eq. 43 they are \(\bar X = Z_1Z_4Z_7\), which flips the sign of every block, and \(\bar Z = X_1X_2X_3\), which reads the sign of one block.</p>
+<aside class="note">
+<p><strong>Typo in the paper.</strong> Eq. 44 labels the stabilizer group \(\mathcal S_{[[9,3,3]]}\); the code is \([[9,1,3]]\).</p>
+</aside>
+<p>From here the paper turns to the surface code. These notes take a detour first: CSS codes, of which Shor's code is one, since its generators are each made of only \(X\)s or only \(Z\)s.</p>
+
+<h2 id="figures">Interactive figures</h2>
+<p>Click a qubit to cycle through \(X\), \(Z\) and \(Y\) errors, or click a table row. Within each tab the parts share one error. The bars are drawn in the code's own basis: the codespace \(\C\) in its logical basis \(\ket{j}_\L\), and the error space the syndrome points to as \(R\cdot\C\), where \(R\) is the lightest error with that syndrome. So the bars show what the error did to the <em>encoded</em> information: identical to the input when undoing \(R\) would recover it, visibly changed when it would not. \(Y\) is applied as \(ZX = iY\); the global phase is invisible.</p>
+
+<qec-tabs aria-label="codes">
+<section data-tab="[[4,2,2]] code">
+<qec-figure code="four-two-two" label="A" error="XIII" title="The [[4,2,2]] detection code">
+  <qec-code-view code="four-two-two" allowed="XZY" title="Errors, meters, and the amplitudes in the logical basis"></qec-code-view>
+  <qec-syndrome-table code="four-two-two" errors="XZY" max-weight="1" title="Every single-qubit error (paper's table 3)"></qec-syndrome-table>
+  <qec-projection code="four-two-two" title="The codewords by projection (eq. 34, 35)"></qec-projection>
+</qec-figure>
+</section>
+<section data-tab="Shor code">
+<qec-figure code="shor" label="B" error="IZIIIIIII" title="The Shor [[9,1,3]] code">
+  <qec-code-view code="shor" allowed="XZY" groups="3,3,3" decoder title="Errors, meters, decoder, and the amplitudes in the logical basis"></qec-code-view>
+  <qec-syndrome-table code="shor" errors="XZY" max-weight="1" decoder title="Every single-qubit error (paper's table 4, with Y)"></qec-syndrome-table>
+  <qec-projection code="shor" groups="3,3,3" title="The codewords by projection, with the missing logical step"></qec-projection>
+</qec-figure>
+</section>
+</qec-tabs>
+</main>
+<footer>
+<p>Part 2 of <a href="index.html">Notes on quantum error correction</a>, by Shiwen An. The structure follows Joschka Roffe, <em>Quantum error correction: an introductory guide</em>, Contemporary Physics 60, 226 (2019), <a href="https://arxiv.org/abs/1907.11157">arXiv:1907.11157</a>, section 4; equation numbers in the margins refer to it. The text, figures and code here are original. Text under CC BY 4.0, code under the MIT licence. Revised 23 September 2026.</p>
+</footer>
+</div>
+</body>
+</html>

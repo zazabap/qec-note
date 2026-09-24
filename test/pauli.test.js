@@ -65,3 +65,38 @@ test('distance: 3 against bit flips alone, 1 once phase flips are allowed', () =
   assert.equal(getCode('two-qubit').distance(['X']), 2);
   assert.equal(getCode('two-qubit').distance(), 1);
 });
+
+test('table 3: [[4,2,2]] single-qubit syndromes, logicals of eq. 33, distance 2', () => {
+  const code = getCode('four-two-two');
+  assert.equal(code.k, 2);
+  for (let i = 0; i < 4; i++) {
+    assert.equal(code.syndromeString(Pauli.single(4, i, 'X')), '10');
+    assert.equal(code.syndromeString(Pauli.single(4, i, 'Z')), '01');
+    assert.equal(code.syndromeString(Pauli.single(4, i, 'Y')), '11');
+  }
+  assert.equal(code.params(), '[[4, 2, 2]]');
+  assert.deepEqual(code.classify('XIXI').action, ['X̄₁']);
+  assert.deepEqual(code.classify('ZIIZ').action, ['Z̄₁']);
+  assert.deepEqual(code.classify('XXII').action, ['X̄₁', 'X̄₂']);   // X₁X₂ = X̄₁X̄₂ up to stabilizers
+  assert.equal(code.classify('XXXX').kind, 'stabilizer');
+});
+
+test('table 4: Shor code syndromes, degeneracy, distance 3', () => {
+  const code = getCode('shor');
+  const X = ['10000000', '11000000', '01000000', '00100000', '00110000', '00010000', '00001000', '00001100', '00000100'];
+  const Z = ['00000010', '00000010', '00000010', '00000011', '00000011', '00000011', '00000001', '00000001', '00000001'];
+  for (let i = 0; i < 9; i++) {
+    assert.equal(code.syndromeString(Pauli.single(9, i, 'X')), X[i], `X${i + 1}`);
+    assert.equal(code.syndromeString(Pauli.single(9, i, 'Z')), Z[i], `Z${i + 1}`);
+  }
+  assert.equal(code.classify(Pauli.fromString('Z1Z2', 9)).kind, 'stabilizer');
+  assert.equal(code.params(), '[[9, 1, 3]]');
+  // the lookup decoder repairs every single-qubit error, Z₂ via Z₁ (degenerate)
+  const table = code.lookupDecoder(['X', 'Z', 'Y']);
+  for (const row of code.singleQubitTable(['X', 'Z', 'Y'])) {
+    const r = code.classify(row.error.mul(table.get(row.syndrome)));
+    assert.ok(r.kind === 'identity' || r.kind === 'stabilizer', row.label);
+  }
+  assert.equal(table.get(code.syndromeString(Pauli.fromString('Z2', 9))).toLabelled(), 'Z₁');
+  assert.equal(code.lightestWithSyndrome('10000010').toLabelled(), 'Y₁');
+});

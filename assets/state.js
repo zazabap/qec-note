@@ -124,6 +124,32 @@ export class State {
   }
 
   /**
+   * Apply a Pauli string, with Y applied as Z·X. Z·X = iY, so the result is
+   * the true Y-error state up to a global phase, which no measurement sees.
+   * This keeps every amplitude real.
+   */
+  applyPauliUpToPhase(pauli, offset = 0) {
+    for (let i = 0; i < pauli.n; i++) {
+      const op = pauli.at(i);
+      if (op === 'X' || op === 'Y') this.x(offset + i);
+      if (op === 'Z' || op === 'Y') this.z(offset + i);
+    }
+    return this;
+  }
+
+  /** (𝟙 + P)|ψ⟩, unnormalised: the projection onto P's +1 eigenspace, times two. */
+  projectPlus(pauli) {
+    const moved = this.clone().applyPauliUpToPhase(pauli);
+    for (let i = 0; i < this.dim; i++) this.a[i] += moved.a[i];
+    return this;
+  }
+
+  /** ⟨ψ|P|ψ⟩ for a Pauli made of X and Z (real). */
+  expect(pauli) {
+    return this.overlap(this.clone().applyPauliUpToPhase(pauli));
+  }
+
+  /**
    * The controlled version of a Pauli string, controlled on qubit `control`:
    * controlled-Z for each Z in the string and controlled-X (CNOT) for each X.
    * This is the middle of the syndrome-extraction circuit in Roffe's figures 2–4.
@@ -280,6 +306,46 @@ export function codewords(code) {
   const plus = encode(code, State.single(Math.SQRT1_2, Math.SQRT1_2));
   const minus = encode(code, State.single(Math.SQRT1_2, -Math.SQRT1_2));
   return { zero, one, plus, minus };
+}
+
+/**
+ * The logical basis |j⟩ᴸ, j = 0 … 2^k − 1, of any stabilizer code whose
+ * generators and logical operators are made of X and Z.
+ *
+ * |0…0⟩ᴸ is the projection of a computational basis state onto the +1
+ * eigenspace of every generator *and every logical Z̄* (eq. 34 projects onto
+ * the generators only, which fixes the logical value only when every Z̄ can be
+ * written with Z operators; for the Shor code it cannot). The first basis
+ * state with a non-zero projection is used, so the phase convention is the
+ * paper's: |0…0⟩ᴸ has positive amplitudes on |0…0⟩ when possible. Then
+ * |j⟩ᴸ = X̄₁^j₁ ⋯ X̄ₖ^jₖ |0…0⟩ᴸ, with j₁ the most significant bit.
+ */
+export function logicalBasis(code) {
+  if (code._logicalBasis) return code._logicalBasis;
+  const n = code.n, k = code.logicals.length;
+  const projectors = [...code.stabilizers, ...code.logicals.map((l) => l.Z)];
+  let zero = null;
+  for (let x = 0; x < 1 << n && !zero; x++) {
+    const s = new State(n); s.a[0] = 0; s.a[x] = 1;
+    for (const P of projectors) s.projectPlus(P);
+    if (s.norm2() > 1e-9) zero = s.normalize();
+  }
+  const basis = [];
+  for (let j = 0; j < 1 << k; j++) {
+    const v = zero.clone();
+    for (let b = 0; b < k; b++) if ((j >> (k - 1 - b)) & 1) v.applyPauliUpToPhase(code.logicals[b].X);
+    basis.push(v);
+  }
+  code._logicalBasis = basis;
+  return basis;
+}
+
+/** Σⱼ cⱼ|j⟩ᴸ for real coefficients c (normalised). */
+export function encodeLogical(code, coeffs) {
+  const basis = logicalBasis(code);
+  const s = new State(code.n, new Float64Array(1 << code.n));
+  coeffs.forEach((c, j) => { for (let i = 0; i < s.dim; i++) s.a[i] += c * basis[j].a[i]; });
+  return s.normalize();
 }
 
 /**

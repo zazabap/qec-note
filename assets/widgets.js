@@ -11,7 +11,7 @@
 
 import { Pauli, subscript } from './pauli.js';
 import { getCode } from './codes.js';
-import { State, encode, codewords, subspaces } from './state.js';
+import { State, encode, codewords, subspaces, logicalBasis, encodeLogical } from './state.js';
 
 export { Pauli, getCode, State };
 
@@ -55,7 +55,7 @@ const attr = (el, name, fallback) => {
   return v === null || v === '' ? fallback : v;
 };
 const flag = (el, name) => el.hasAttribute(name);
-const kinds = (str) => (str.toUpperCase().match(/[XZ]/g) ?? []).filter((k, i, a) => a.indexOf(k) === i);
+const kinds = (str) => (str.toUpperCase().match(/[XYZ]/g) ?? []).filter((k, i, a) => a.indexOf(k) === i);
 const ket = (bits) => `|${bits}⟩`;
 const sign = (v) => (v < 0 ? '−' : '');
 const fmt = (v, d = 2) => (Math.abs(v) < 5e-4 ? '0' : sign(v) + Math.abs(v).toFixed(d));
@@ -64,7 +64,7 @@ const pct = (v) => `${(100 * v).toFixed(1)}%`;
 /** Default input: α = 0.8, β = 0.6, so the two amplitudes are easy to tell apart. */
 const DEFAULT_THETA = 2 * Math.atan2(0.6, 0.8);
 
-const WIDGET_TAGS = 'qec-state-view, qec-circuit, qec-suppression, qec-syndrome-table';
+const WIDGET_TAGS = 'qec-state-view, qec-code-view, qec-projection, qec-circuit, qec-suppression, qec-syndrome-table';
 
 /** Mark the host as a widget (styling, and MathJax leaves it alone). */
 function setup(el) {
@@ -167,9 +167,11 @@ function ampChart(state, layout, { colW = 46, height = 128, compact = false, tit
 
 /* --------------------------------------------------- qubits, meters */
 
-function qubitButtons(code, err, allowed, onCycle) {
+function qubitButtons(code, err, allowed, onCycle, groups = []) {
   const buttons = [];
+  let boundary = groups.length ? groups[0] : Infinity, g = 0;
   for (let i = 0; i < code.n; i++) {
+    if (i === boundary) { buttons.push(h('span', { class: 'qubit-gap', 'aria-hidden': 'true' })); g += 1; boundary += groups[g] ?? Infinity; }
     const op = err.at(i);
     buttons.push(h('button', {
       type: 'button', class: `qubit op-${op}`, 'data-i': i,
@@ -767,11 +769,18 @@ class QecSyndromeTable extends Base {
     this.fig = sharedError(this, code.n);
     if (this.fig) this.fig.addEventListener('qec-error', () => this.highlight());
     const ks = kinds(attr(this, 'errors', 'X'));
-    const rows = code.errorTable(ks);
+    const maxW = Number(attr(this, 'max-weight', code.n));
+    const rows = maxW === 1
+      ? [{ error: Pauli.identity(code.n), label: 'I', syndrome: '0'.repeat(code.stabilizers.length), weight: 0 }, ...code.singleQubitTable(ks)]
+      : code.errorTable(ks, maxW);
     const m = code.stabilizers.length;
-    const table = code.lookupDecoder(['X']);
+    const table = code.lookupDecoder(ks);
     const single = new Map();
     for (const r of rows) if (r.weight === 1 && !single.has(r.syndrome)) single.set(r.syndrome, r.label);
+    const distinct = new Set(rows.map((r) => r.syndrome)).size;
+    const shareNote = rows.length > 2 ** m
+      ? `Rows are ordered by weight. The ${m} generator${m > 1 ? 's' : ''} ${code.stabilizers.map((s) => s.toLabelled(code.labels)).join(' and ')} give${m > 1 ? '' : 's'} ${2 ** m} possible syndromes for ${rows.length} error patterns, so some patterns must share a syndrome${flag(this, 'decoder') ? '; the decoder always assumes the lightest one' : ''}.`
+      : `The ${rows.length - 1} single-qubit errors produce ${distinct - 1} distinct non-zero syndromes out of ${2 ** m - 1} possible${distinct < rows.length ? ', so some share a syndrome' : ''}.`;
 
     const verdict = (r) => {
       const c = code.classify(r.error);
@@ -782,7 +791,8 @@ class QecSyndromeTable extends Base {
       const corr = table.get(r.syndrome);
       const residual = r.error.mul(corr);
       const rc = code.classify(residual);
-      if (rc.kind === 'identity' || rc.kind === 'stabilizer') return `detected; decoder applies ${corr.toLabelled(code.labels)} and recovers`;
+      if (rc.kind === 'identity') return `detected; decoder applies ${corr.toLabelled(code.labels)} and recovers`;
+      if (rc.kind === 'stabilizer') return `detected; decoder applies ${corr.toLabelled(code.labels)}, and ${r.error.mul(corr).toLabelled(code.labels)} is a stabilizer, so it recovers (degenerate)`;
       return `same syndrome as ${single.get(r.syndrome)}; decoder applies ${corr.toLabelled(code.labels)}, leaving ${rc.action.join(' ')}`;
     };
 
@@ -802,7 +812,7 @@ class QecSyndromeTable extends Base {
           h('td', { class: 'mono' }, r.label), h('td', { class: 'mono' }, r.weight),
           Array.from(r.syndrome).map((b) => h('td', { class: `mono${b === '1' ? ' lit' : ''}` }, b === '1' ? '−1' : '+1')),
           h('td', { class: 'mono' }, r.syndrome), h('td', {}, verdict(r))))))),
-      h('p', { class: 'w-note' }, `Rows are ordered by weight. The ${m} generator${m > 1 ? 's' : ''} ${code.stabilizers.map((s) => s.toLabelled(code.labels)).join(' and ')} give${m > 1 ? '' : 's'} ${2 ** m} possible syndromes for ${rows.length} error patterns, so some patterns must share a syndrome${flag(this, 'decoder') ? '; the decoder always assumes the lightest one' : ''}.`,
+      h('p', { class: 'w-note' }, shareNote,
         this.fig ? ' Click a row to apply that error in the other parts.' : ''));
     this.highlight();
   }
@@ -827,6 +837,286 @@ class QecFigure extends Base {
       h('span', { class: 'w-title' }, attr(this, 'title', '')),
       h('span', { class: 'w-hint' }, attr(this, 'hint', 'The parts share one error: change it in any of them and the others follow.')));
     this.prepend(head);
+  }
+}
+
+/* ------------------------------------------------------ code-basis chart */
+
+/**
+ * Bars for a list of columns [{label, amp}], optionally grouped into bands
+ * [{label, count, kind: 'C' | 'F'}]. Used where the columns are not
+ * computational basis states: the logical basis of a code, or the non-zero
+ * terms of a state.
+ */
+function barChart(columns, bands = [], { colW = 56, height = 128, title = 'amplitudes' } = {}) {
+  const padL = 6, padR = 6, top = bands.length ? 20 : 8, bottom = 18;
+  const W = padL + Math.max(columns.length, 1) * colW + padR;
+  const half = height / 2, y0 = top + half, barMax = half - 14;
+  const barW = Math.min(24, Math.round(colW * 0.45));
+  const H = top + height + bottom;
+  const els = [];
+  let x = padL;
+  for (const b of bands) {
+    const w = b.count * colW;
+    els.push(svg('rect', { x, y: 2, width: w - 3, height: H - 4, rx: 3, class: `band band-${b.kind}` }));
+    els.push(svg('text', { x: x + 6, y: 13, class: 'band-label' }, b.label));
+    x += w;
+  }
+  els.push(svg('line', { x1: padL, x2: W - padR, y1: y0, y2: y0, class: 'zero' }));
+  columns.forEach((col, c) => {
+    const a = col.amp, cx = padL + c * colW + colW / 2, hgt = Math.abs(a) * barMax;
+    const g = svg('g', { class: 'col' }, svg('title', {}, `${col.label}: amplitude ${fmt(a, 3)}`));
+    if (hgt > 0.5) {
+      const r = Math.min(4, hgt), xl = cx - barW / 2, xr = cx + barW / 2;
+      const d = a > 0
+        ? `M${xl},${y0} V${y0 - hgt + r} Q${xl},${y0 - hgt} ${xl + r},${y0 - hgt} H${xr - r} Q${xr},${y0 - hgt} ${xr},${y0 - hgt + r} V${y0} Z`
+        : `M${xl},${y0} V${y0 + hgt - r} Q${xl},${y0 + hgt} ${xl + r},${y0 + hgt} H${xr - r} Q${xr},${y0 + hgt} ${xr},${y0 + hgt - r} V${y0} Z`;
+      g.append(svg('path', { d, class: a > 0 ? 'bar' : 'bar bar-neg' }));
+      g.append(svg('text', { x: cx, y: a > 0 ? y0 - hgt - 4 : y0 + hgt + 11, 'text-anchor': 'middle', class: 'val' }, fmt(a)));
+    }
+    g.append(svg('text', { x: cx, y: H - 4, 'text-anchor': 'middle', class: 'ket' }, col.label));
+    els.push(g);
+  });
+  return svg('svg', { viewBox: `0 0 ${W} ${H}`, class: 'amp-chart', style: { maxWidth: `${W}px` }, role: 'img', 'aria-label': title }, els);
+}
+
+const logicalKet = (j, k) => `|${j.toString(2).padStart(k, '0')}⟩ᴸ`;
+
+function groupedKet(i, n, groups) {
+  const bits = i.toString(2).padStart(n, '0');
+  if (!groups.length) return `|${bits}⟩`;
+  const parts = [];
+  let at = 0;
+  for (const g of groups) { parts.push(bits.slice(at, at + g)); at += g; }
+  if (at < n) parts.push(bits.slice(at));
+  return `|${parts.join(' ')}⟩`;
+}
+
+/** Real input coefficients for k logical qubits: a product of cos(θ/2)|0⟩ + sin(θ/2)|1⟩ factors. */
+function productCoeffs(thetas) {
+  let c = [1];
+  for (const t of thetas) {
+    const a = Math.cos(t / 2), b = Math.sin(t / 2);
+    c = c.flatMap((v) => [v * a, v * b]);
+  }
+  return c;
+}
+
+/* --------------------------------------------------- <qec-code-view> */
+
+class QecCodeView extends Base {
+  connectedCallback() {
+    if (this.dataset.ready) return;
+    this.dataset.ready = '1';
+    setup(this);
+    this.code = getCode(attr(this, 'code', 'four-two-two'));
+    this.k = this.code.logicals.length;
+    this.allowed = kinds(attr(this, 'allowed', 'XZY'));
+    this.groups = attr(this, 'groups', '').split(',').filter(Boolean).map(Number);
+    const defaults = [DEFAULT_THETA, 2 * Math.atan2(0.28, 0.96)];
+    this.thetas = attr(this, 'theta', '') ? attr(this, 'theta').split(',').map(Number) : defaults.slice(0, this.k);
+    this.fig = sharedError(this, this.code.n);
+    this.err = this.fig ? this.fig.err : attr(this, 'initial') ? Pauli.fromString(attr(this, 'initial'), this.code.n) : Pauli.identity(this.code.n);
+    if (this.fig) this.fig.addEventListener('qec-error', () => { const f = this.pendingFocus; this.pendingFocus = undefined; this.render(f); });
+    this.id ||= nextId('cv');
+    this.render();
+  }
+
+  changed(focusIndex) {
+    if (this.fig) { this.pendingFocus = focusIndex; this.fig.broadcast(); } else this.render(focusIndex);
+  }
+
+  cycle(i) {
+    const order = ['I', ...this.allowed];
+    this.err.set(i, order[(order.indexOf(this.err.at(i)) + 1) % order.length]);
+    this.changed(i);
+  }
+
+  chart(state, syn) {
+    const code = this.code, K = 1 << this.k;
+    const basis = logicalBasis(code);
+    const cols = [], bands = [{ label: 'C', count: K, kind: 'C' }];
+    const inC = !/1/.test(syn);
+    for (let j = 0; j < K; j++) cols.push({ label: logicalKet(j, this.k), amp: inC ? state.overlap(basis[j]) : 0 });
+    let R = null;
+    if (!inC) {
+      R = code.lightestWithSyndrome(syn) ?? this.err;
+      bands.push({ label: `${R.toLabelled(code.labels)} · C`, count: K, kind: 'F' });
+      for (let j = 0; j < K; j++) cols.push({ label: logicalKet(j, this.k), amp: state.overlap(basis[j].clone().applyPauliUpToPhase(R)) });
+    }
+    return { svg: barChart(cols, bands, { colW: this.k > 1 ? 54 : 62, title: `Amplitudes of the state in the logical basis of the codespace${R ? ` and of the error space ${R.toLabelled(code.labels)}·C` : ''}` }), R };
+  }
+
+  describe(c, R) {
+    const code = this.code, L = code.labels;
+    const name = this.err.toLabelled(L);
+    const syn = Array.from(c.syndrome).join('');
+    switch (c.kind) {
+      case 'identity': return `No error. The state is in the codespace C and every generator returns +1.`;
+      case 'stabilizer': return `${name} is a product of stabilizers: syndrome ${syn}, and the encoded state is unchanged.`;
+      case 'logical': return `${name} commutes with every generator, so the syndrome is ${syn} and nothing is detected, but it acts on the encoded qubits as ${c.action.join(' ')}: an undetected logical error. Compare the bars in C with the input.`;
+      default: {
+        const rest = this.err.mul(R);
+        const rc = code.classify(rest);
+        const base = `${name} anticommutes with ${c.syndrome.reduce((a, b) => a + b, 0)} of the ${code.stabilizers.length} generators: syndrome ${syn}, detected. The state is in the error space ${R.toLabelled(L)}·C, the codespace moved by the lightest error with this syndrome; its bars are read in that moved basis.`;
+        if (rc.kind === 'identity') return base + ' Here the error is that lightest error, so the bars repeat the input exactly.';
+        if (rc.kind === 'stabilizer') return base + ` ${name} and ${R.toLabelled(L)} differ by the stabilizer ${rest.toLabelled(L)}, so the bars still repeat the input: undoing ${R.toLabelled(L)} would undo ${name} (degeneracy).`;
+        return base + ` ${name} and ${R.toLabelled(L)} share the syndrome but differ by the logical ${rc.action.join(' ')}, and the bars show it: undoing ${R.toLabelled(L)} would leave ${rc.action.join(' ')}. The syndrome detects the error but cannot say which one it was.`;
+      }
+    }
+  }
+
+  decoderLine(c, state, psiL) {
+    const code = this.code, L = code.labels;
+    const syn = Array.from(c.syndrome).join('');
+    const corr = code.lookupDecoder(['X', 'Z', 'Y']).get(syn);
+    if (!corr) return h('p', { class: 'decoder fail' }, `Decoder: syndrome ${syn} is not produced by any single-qubit error, so the lookup table has no entry for it.`);
+    const residual = this.err.mul(corr);
+    const r = code.classify(residual);
+    const ok = r.kind === 'identity' || r.kind === 'stabilizer';
+    const F = state.clone().applyPauliUpToPhase(corr).fidelity(psiL);
+    if (corr.isIdentity()) return h('p', { class: `decoder ${ok ? 'ok' : 'fail'}` }, `Decoder: syndrome ${syn} → no correction. `, ok ? 'Nothing to do.' : `Fidelity to the input ${fmt(F, 3)}: a ${r.action.join(' ')} error slipped through.`);
+    return h('p', { class: `decoder ${ok ? 'ok' : 'fail'}` },
+      `Decoder: syndrome ${syn} → apply ${corr.toLabelled(L)}. Net effect ${residual.toLabelled(L)}`,
+      r.kind === 'stabilizer' ? ', a stabilizer' : '',
+      `: fidelity to the input ${fmt(F, 3)}. `, ok ? 'Recovered.' : `A logical ${r.action.join(' ')} remains.`);
+  }
+
+  render(focusIndex) {
+    const code = this.code, L = code.labels;
+    const coeffs = productCoeffs(this.thetas);
+    const psiL = encodeLogical(code, coeffs);
+    const state = psiL.clone().applyPauliUpToPhase(this.err);
+    const c = code.classify(this.err);
+    const syn = Array.from(c.syndrome).join('');
+    const { svg: chart, R } = this.chart(state, syn);
+    const logicals = code.logicals.map((l, j) => {
+      const sub = this.k > 1 ? subscript(j + 1) : '';
+      return `X̄${sub} = ${l.X.toLabelled(L)}, Z̄${sub} = ${l.Z.toLabelled(L)}`;
+    }).join('; ');
+    const input = coeffs.map((v, j) => `${fmt(v)}${logicalKet(j, this.k)}`).join(' + ').replace(/\+ −/g, '− ');
+    this.replaceChildren(
+      header(this, code.name, `Click a qubit to cycle ${['no error', ...this.allowed].join(' → ')}.`),
+      h('p', { class: 'w-meta' }, h('span', { class: 'mono' }, code.params()), ` · logical operators ${logicals}`),
+      h('div', { class: 'w-row' }, qubitButtons(code, this.err, this.allowed, (i) => this.cycle(i), this.groups), meters(code, c.syndrome)),
+      h('p', { class: 'w-note' }, `Input |ψ⟩ᴸ = ${input}.`),
+      chart,
+      h('p', { class: `status is-${c.kind}` }, this.describe(c, R)),
+      flag(this, 'decoder') ? this.decoderLine(c, state, psiL) : null,
+      h('div', { class: 'controls' },
+        this.thetas.map((t, j) => slider(this.k > 1 ? `θ${subscript(j + 1)} =` : 'input θ =', { id: `${this.id}-theta-${j}`, min: 0, max: Math.PI.toFixed(4), step: 0.01, value: t,
+          format: (v) => `${v.toFixed(2)} rad`, oninput: (v) => { this.thetas[j] = v; this.render(); } })),
+        h('button', { type: 'button', onclick: () => { assignPauli(this.err, Pauli.identity(code.n)); this.changed(); } }, 'Clear errors'),
+        code.logicals.flatMap((l, j) => ['X', 'Z'].map((op) => h('button', { type: 'button', onclick: () => { assignPauli(this.err, this.err.mul(l[op])); this.changed(); } },
+          `Apply ${op}̄${this.k > 1 ? subscript(j + 1) : ''}`)))));
+    if (focusIndex !== undefined) this.querySelector(`.qubit[data-i="${focusIndex}"]`)?.focus();
+  }
+}
+
+/* -------------------------------------------------- <qec-projection> */
+
+class QecProjection extends Base {
+  connectedCallback() {
+    if (this.dataset.ready) return;
+    this.dataset.ready = '1';
+    setup(this);
+    this.code = getCode(attr(this, 'code', 'four-two-two'));
+    this.k = this.code.logicals.length;
+    this.groups = attr(this, 'groups', '').split(',').filter(Boolean).map(Number);
+    this.target = 0;
+    this.stage = 0;
+    this.build();
+    this.render();
+  }
+
+  build() {
+    const code = this.code, L = code.labels;
+    const stages = [{ name: `Start from |${'0'.repeat(code.n)}⟩`, op: null }];
+    code.stabilizers.forEach((g) => stages.push({ name: `Project with (𝟙 + ${g.toLabelled(L)})`, op: g, kind: 'stabilizer' }));
+    // eq. 34 stops here; add logical Z̄ projections only if the logical value is not yet fixed
+    const s = new State(code.n);
+    for (const g of code.stabilizers) s.projectPlus(g);
+    s.normalize();
+    code.logicals.forEach((l, j) => {
+      if (Math.abs(s.expect(l.Z) - 1) > 1e-9) stages.push({ name: `Project with (𝟙 + Z̄${this.k > 1 ? subscript(j + 1) : ''}) = (𝟙 + ${l.Z.toLabelled(L)})`, op: l.Z, kind: 'logical' });
+    });
+    this.baseStages = stages;
+  }
+
+  get stages() {
+    const st = this.baseStages.slice();
+    if (this.target) {
+      const ops = [];
+      for (let b = 0; b < this.k; b++) if ((this.target >> (this.k - 1 - b)) & 1) ops.push(b);
+      st.push({ name: `Apply ${ops.map((b) => `X̄${this.k > 1 ? subscript(b + 1) : ''}`).join('')}`, ops, kind: 'flip' });
+    }
+    return st;
+  }
+
+  stateAt(i) {
+    const code = this.code;
+    const s = new State(code.n);
+    let lastNorm = 1;
+    const stages = this.stages;
+    for (let t = 1; t <= i; t++) {
+      const st = stages[t];
+      if (st.op) { s.projectPlus(st.op); lastNorm = Math.sqrt(s.norm2()); s.normalize(); }
+      else for (const b of st.ops) s.applyPauliUpToPhase(code.logicals[b].X);
+    }
+    return { s, lastNorm };
+  }
+
+  checks(s) {
+    const code = this.code, L = code.labels;
+    const items = [...code.stabilizers.map((g) => ({ name: g.toLabelled(L), P: g })),
+      ...code.logicals.map((l, j) => ({ name: `Z̄${this.k > 1 ? subscript(j + 1) : ''}`, P: l.Z }))];
+    return h('div', { class: 'checks', role: 'group', 'aria-label': 'expectation values' },
+      items.map(({ name, P }) => {
+        const v = s.expect(P);
+        const cls = Math.abs(v - 1) < 1e-9 ? 'plus' : Math.abs(v + 1) < 1e-9 ? 'minus' : 'mixed';
+        return h('span', { class: `check ${cls}` }, h('span', { class: 'mono' }, `⟨${name}⟩`), ` ${fmt(v)}`);
+      }));
+  }
+
+  caption(i, s, lastNorm) {
+    const code = this.code, st = this.stages[i], L = code.labels;
+    if (i === 0) return `Every Z-type generator already returns +1 on |${'0'.repeat(code.n)}⟩; the X-type ones return 0, which means the state is an equal mix of their +1 and −1 eigenspaces.`;
+    if (st.kind === 'flip') return `The projections produced |${'0'.repeat(this.k)}⟩ᴸ. Logical X̄ operators turn it into ${logicalKet(this.target, this.k)} (the paper's remark after eq. 35).`;
+    const r = lastNorm;
+    const already = Math.abs(r - 2) < 1e-9;
+    const what = st.kind === 'logical'
+      ? ` Eq. 34 stops before this step. For this code the generators alone leave the logical value open, so |${'0'.repeat(code.n)}⟩ projects to a superposition of codewords, and fixing Z̄ = +1 is needed to get |0⟩ᴸ.`
+      : '';
+    return (already
+      ? `${st.op.toLabelled(L)} already returned +1, so (𝟙 + P) only doubles the state (norm ${fmt(r, 3)}) and normalising changes nothing.`
+      : `The state had ⟨P⟩ = 0, so (𝟙 + P) keeps its +1 half and adds the image under P: the norm is ${fmt(r, 3)} = √2, and 1/N in eq. 34 restores it to one.`) + what;
+  }
+
+  render() {
+    const code = this.code;
+    const stages = this.stages;
+    this.stage = Math.min(this.stage, stages.length - 1);
+    const { s, lastNorm } = this.stateAt(this.stage);
+    const cols = [];
+    for (let i = 0; i < s.dim; i++) if (Math.abs(s.a[i]) > 1e-9) cols.push({ label: groupedKet(i, code.n, this.groups), amp: s.a[i] });
+    const colW = code.n > 6 ? 84 : 56;
+    const K = 1 << this.k;
+    this.replaceChildren(
+      header(this, `Preparing the codewords by projection (eq. 34)`, 'Step through the projections.'),
+      h('p', { class: 'stage-caption' }, h('b', {}, `${stages[this.stage].name}. `), this.caption(this.stage, s, lastNorm)),
+      this.checks(s),
+      h('p', { class: 'w-note' }, `Non-zero terms of the state in the computational basis (${cols.length} of ${s.dim}):`),
+      h('div', { class: 'scroll' }, barChart(cols, [], { colW, height: 112, title: `State after ${stages[this.stage].name}: ${s.toString(3)}` })),
+      h('div', { class: 'controls stack' },
+        h('div', { class: 'errpick', role: 'group', 'aria-label': 'target codeword' },
+          h('span', { class: 'errpick-name' }, 'Target:'),
+          Array.from({ length: K }, (_, j) => h('button', { type: 'button', class: `chip${this.target === j ? ' on' : ''}`, 'aria-pressed': this.target === j,
+            onclick: () => { this.target = j; this.render(); } }, logicalKet(j, this.k)))),
+        h('div', { class: 'stepper' },
+          h('button', { type: 'button', disabled: this.stage === 0, onclick: () => { this.stage--; this.render(); } }, '← Back'),
+          h('span', { class: 'stepper-pos' }, `Step ${this.stage + 1} of ${stages.length}`),
+          h('button', { type: 'button', class: 'primary', disabled: this.stage === stages.length - 1, onclick: () => { this.stage++; this.render(); } }, this.stage + 1 < stages.length ? `Next: ${stages[this.stage + 1].name} →` : 'Done'),
+          h('button', { type: 'button', onclick: () => { this.stage = 0; this.render(); } }, 'Restart'))));
   }
 }
 
@@ -874,6 +1164,8 @@ export const components = {
   'qec-tabs': QecTabs,
   'qec-figure': QecFigure,
   'qec-state-view': QecStateView,
+  'qec-code-view': QecCodeView,
+  'qec-projection': QecProjection,
   'qec-circuit': QecCircuit,
   'qec-suppression': QecSuppression,
   'qec-syndrome-table': QecSyndromeTable,

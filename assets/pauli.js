@@ -245,10 +245,10 @@ export class StabilizerCode {
     return { kind: action.length ? 'logical' : 'stabilizer', syndrome, action };
   }
 
-  /** Every error built from the given kinds on any subset of qubits, lightest first. */
-  errorTable(kinds = ['X']) {
+  /** Every error built from the given kinds on up to `maxWeight` qubits, lightest first. */
+  errorTable(kinds = ['X'], maxWeight = this.n) {
     const rows = [];
-    for (let w = 0; w <= this.n; w++) {
+    for (let w = 0; w <= maxWeight; w++) {
       for (const qubits of combinations(this.n, w)) {
         const total = kinds.length ** w;
         for (let code = 0; code < total; code++) {
@@ -262,9 +262,42 @@ export class StabilizerCode {
     return rows;
   }
 
-  /** Syndromes of every single-qubit error of the given kinds. */
+  /** Syndromes of every single-qubit error, grouped by kind (X₁…Xₙ, then Z₁…Zₙ, …) as in the paper's tables. */
   singleQubitTable(kinds = ['X', 'Z', 'Y']) {
-    return this.errorTable(kinds).filter((r) => r.weight === 1);
+    const rows = [];
+    for (const kind of kinds) {
+      for (let i = 0; i < this.n; i++) {
+        const error = Pauli.single(this.n, i, kind);
+        rows.push({ error, label: error.toLabelled(this.labels), syndrome: this.syndromeString(error), weight: 1 });
+      }
+    }
+    return rows;
+  }
+
+  /**
+   * A lightest error with the given syndrome, built from `kinds`, searching
+   * up to `maxWeight`. Used to name the error space a syndrome points to.
+   */
+  lightestWithSyndrome(syndrome, kinds = ['X', 'Z', 'Y'], maxWeight = Math.min(this.n, 3)) {
+    this._lightest ??= new Map();
+    const key = syndrome + '|' + kinds.join('');
+    if (this._lightest.has(key)) return this._lightest.get(key);
+    let found = null;
+    if (!/1/.test(syndrome)) found = Pauli.identity(this.n);
+    for (let w = 1; !found && w <= maxWeight; w++) {
+      for (const qubits of combinations(this.n, w)) {
+        const total = kinds.length ** w;
+        for (let code = 0; code < total && !found; code++) {
+          const e = Pauli.identity(this.n);
+          let c = code;
+          for (const q of qubits) { e.set(q, kinds[c % kinds.length]); c = Math.floor(c / kinds.length); }
+          if (this.syndromeString(e) === syndrome) found = e;
+        }
+        if (found) break;
+      }
+    }
+    this._lightest.set(key, found);
+    return found;
   }
 
   /**
