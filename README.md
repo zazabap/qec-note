@@ -19,10 +19,18 @@ into the main site (below).
 ## How it is built
 
 Plain HTML, one stylesheet, four ES modules. No framework, no build step, no
-dependencies: open `index.html` from the file system and it works, subject to
-the browser allowing `file://` module scripts (Firefox does; Chrome needs a
-local server such as `python3 -m http.server`). MathJax is loaded from cdnjs
-and renders to SVG.
+dependencies. MathJax is loaded from cdnjs and renders to SVG.
+
+To view locally, serve the folder over HTTP (Chrome will not load ES modules
+from `file://`; Firefox will):
+
+```sh
+tools/serve.sh            # http://localhost:8000/   (PORT=8080 tools/serve.sh for another port)
+```
+
+In VS Code with a dev container or Remote SSH, the port is forwarded
+automatically; open it from the Ports panel. The Live Preview or Live Server
+extensions work too, since both serve over HTTP.
 
 ```
 index.html                     contents page
@@ -35,6 +43,7 @@ assets/state.js                real-amplitude state vector for N ≤ ~6 qubits: 
                                controlled Pauli strings, branches by ancilla value
 assets/widgets.js              the figures, as Web Components
 test/                          node:test suites against the paper's tables and equations
+tools/serve.sh                 serves the folder on http://localhost:8000/ for local viewing
 tools/build-artifact.py        bundles a page into one self-contained HTML file
 extras/main-site-project.md    project page for the main site's _projects/ collection
 ```

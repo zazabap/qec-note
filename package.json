@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "build:artifact": "python3 tools/build-artifact.py"
+    "build:artifact": "python3 tools/build-artifact.py",
+    "serve": "tools/serve.sh"
   },
   "license": "MIT"
 }
