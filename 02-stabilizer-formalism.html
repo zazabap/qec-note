@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>The Stabilizer Formalism</title>
 <meta name="description" content="Roffe's sections 4 to 4.4: stabilizer measurement, the stabilizer group, logical operators, the [[4,2,2]] detection code and encoding by projection, with the amplitudes drawn in the code's own basis. Part 2 of a set of notes on quantum error correction.">
-<link rel="stylesheet" href="assets/qec.css?v=20261007">
+<link rel="stylesheet" href="assets/qec.css?v=20261007c">
 <script>
 window.MathJax = {
   tex: {
@@ -29,7 +29,7 @@ window.MathJax = {
 };
 </script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-svg.js"></script>
-<script type="module" src="assets/widgets.js?v=20261007"></script>
+<script type="module" src="assets/widgets.js?v=20261007c"></script>
 </head>
 <body>
 <div class="wrap">
@@ -92,7 +92,7 @@ E\ket\psi_\L\ket0_{A_i} \;\longmapsto\;
 \end{aligned}
 \qquad\text{(eq. 33)}
 \]
-<p>all of weight two, so \(d = 2\): a detection code. Two errors with the same syndrome differ by a logical operator, for example \(X_1X_2 = \bar X_1\bar X_2\) up to a stabilizer, which is exactly why undoing the wrong one would corrupt the data.</p>
+<p>all of weight two, so \(d = 2\): a detection code. It catches every single-qubit error but not every error: the 18 two-qubit errors made of one Pauli type, such as \(X_1X_2\) or \(Z_2Z_4\), commute with both stabilizers, give syndrome 00 and act as logical operators. <a href="#figures">Figure B.2</a> sorts all 256 errors on four qubits by weight and syndrome. Two errors with the same syndrome differ by a logical operator, for example \(X_1X_2 = \bar X_1\bar X_2\) up to a stabilizer, which is exactly why undoing the wrong one would corrupt the data.</p>
 <aside class="note">
 <p><strong>Ordering.</strong> Table 3 lists \(X\) errors with syndrome 10 and \(Z\) errors with 01, which means \(Z_1Z_2Z_3Z_4\) is measured first, as in the paper's figure 5, although the text writes \(\langle X_1X_2X_3X_4, Z_1Z_2Z_3Z_4\rangle\). The figures below measure \(Z_1Z_2Z_3Z_4\) first so that their syndromes match table 3.</p>
 </aside>
@@ -200,7 +200,7 @@ E\ket\psi_\L\ket0_{A_i} \;\longmapsto\;
 
 <qec-figure code="four-two-two" label="B" error="XIII" title="The [[4,2,2]] detection code">
   <qec-circuit code="four-two-two" allowed="XZY" logical title="Encoder, error and syndrome extraction (paper's figure 5)"></qec-circuit>
-  <qec-syndrome-table code="four-two-two" errors="XZY" max-weight="1" title="Every single-qubit error (paper's table 3)"></qec-syndrome-table>
+  <qec-syndrome-table code="four-two-two" errors="XZY" complete title="Every error on four qubits, by weight and syndrome (weight 1 is the paper's table 3)"></qec-syndrome-table>
   <qec-projection code="four-two-two" title="The codewords by projection (eq. 34, 35)"></qec-projection>
 </qec-figure>
 </main>

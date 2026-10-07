@@ -903,64 +903,138 @@ class QecSyndromeTable extends Base {
     if (this.dataset.ready) return;
     this.dataset.ready = '1';
     setup(this);
-    const code = getCode(attr(this, 'code', 'three-qubit'));
+    const code = this.code = getCode(attr(this, 'code', 'three-qubit'));
     this.fig = sharedError(this, code.n);
     if (this.fig) this.fig.addEventListener('qec-error', () => this.highlight());
-    const ks = kinds(attr(this, 'errors', 'X'));
+    this.ks = kinds(attr(this, 'errors', 'X'));
+    this.m = code.stabilizers.length;
+    this.lookup = code.lookupDecoder(this.ks);
+    if (flag(this, 'complete')) return this.initComplete();
     const maxW = Number(attr(this, 'max-weight', code.n));
     const rows = maxW === 1
-      ? [{ error: Pauli.identity(code.n), label: 'I', syndrome: '0'.repeat(code.stabilizers.length), weight: 0 }, ...code.singleQubitTable(ks)]
-      : code.errorTable(ks, maxW);
-    const m = code.stabilizers.length;
-    const table = code.lookupDecoder(ks);
-    const single = new Map();
-    for (const r of rows) if (r.weight === 1 && !single.has(r.syndrome)) single.set(r.syndrome, r.label);
+      ? [{ error: Pauli.identity(code.n), label: 'I', syndrome: '0'.repeat(this.m), weight: 0 }, ...code.singleQubitTable(this.ks)]
+      : code.errorTable(this.ks, maxW);
+    this.single = new Map();
+    for (const r of rows) if (r.weight === 1 && !this.single.has(r.syndrome)) this.single.set(r.syndrome, r.label);
+    const m = this.m;
     const distinct = new Set(rows.map((r) => r.syndrome)).size;
     const shareNote = rows.length > 2 ** m
       ? `Rows are ordered by weight. The ${m} generator${m > 1 ? 's' : ''} ${code.stabilizers.map((s) => s.toLabelled(code.labels)).join(' and ')} give${m > 1 ? '' : 's'} ${2 ** m} possible syndromes for ${rows.length} error patterns, so some patterns must share a syndrome${flag(this, 'decoder') ? '; the decoder always assumes the lightest one' : ''}.`
       : `The ${rows.length - 1} single-qubit errors produce ${distinct - 1} distinct non-zero syndromes out of ${2 ** m - 1} possible${distinct < rows.length ? ', so some share a syndrome' : ''}.`;
-
-    const verdict = (r) => {
-      const c = code.classify(r.error);
-      if (c.kind === 'identity') return 'nothing to do';
-      if (c.kind === 'logical') return `undetected: acts as ${c.action.join(' ')}`;
-      if (c.kind === 'stabilizer') return 'undetected, but harmless (a stabilizer)';
-      if (!flag(this, 'decoder')) return 'detected';
-      const corr = table.get(r.syndrome);
-      const residual = r.error.mul(corr);
-      const rc = code.classify(residual);
-      if (rc.kind === 'identity') return `detected; decoder applies ${corr.toLabelled(code.labels)} and recovers`;
-      if (rc.kind === 'stabilizer') return `detected; decoder applies ${corr.toLabelled(code.labels)}, and ${r.error.mul(corr).toLabelled(code.labels)} is a stabilizer, so it recovers (degenerate)`;
-      return `same syndrome as ${single.get(r.syndrome)}; decoder applies ${corr.toLabelled(code.labels)}, leaving ${rc.action.join(' ')}`;
-    };
-
-    // With many stabilizers the ±1 columns are hidden on narrow screens; the syndrome column has the same bits.
-    const many = code.stabilizers.length > 4;
     this.replaceChildren(
-      header(this, `${code.name}: syndromes of every ${ks.join('/')} error pattern`),
-      h('div', { class: 'fit' }, h('table', { class: 'w-table' },
-        h('thead', {}, h('tr', {}, h('th', {}, 'error'), h('th', {}, 'weight'), code.stabilizers.map((s) => h('th', { class: many ? 'mono stab stab-col' : 'mono stab' }, s.toLabelled(code.labels))), h('th', {}, 'syndrome S'), h('th', {}, 'what happens'))),
-        h('tbody', {}, rows.map((r) => h('tr', {
-          class: code.classify(r.error).kind === 'logical' ? 'is-logical' : '',
-          'data-error': r.error.toString(),
-          tabindex: this.fig ? 0 : undefined,
-          role: this.fig ? 'button' : undefined,
-          title: this.fig ? 'Use this error in the other parts of the figure' : undefined,
-          onclick: this.fig ? () => { assignPauli(this.fig.err, r.error); this.fig.broadcast(); } : undefined,
-          onkeydown: this.fig ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); assignPauli(this.fig.err, r.error); this.fig.broadcast(); } } : undefined,
-        },
-          h('td', { class: 'mono' }, r.label), h('td', { class: 'mono' }, r.weight),
-          Array.from(r.syndrome).map((b) => h('td', { class: `mono${b === '1' ? ' lit' : ''}${many ? ' stab-col' : ''}` }, b === '1' ? '−1' : '+1')),
-          h('td', { class: 'mono' }, r.syndrome), h('td', {}, verdict(r))))))),
+      header(this, `${code.name}: syndromes of every ${this.ks.join('/')} error pattern`),
+      this.errorTable(rows),
       h('p', { class: 'w-note' }, shareNote,
         this.fig ? ' Click a row to apply that error in the other parts.' : ''));
     this.highlight();
   }
 
-  highlight() {
+  /** What the code does with an error, in words. */
+  verdict(r) {
+    const code = this.code;
+    const c = code.classify(r.error);
+    if (c.kind === 'identity') return 'nothing to do';
+    if (c.kind === 'logical') return `undetected: acts as ${c.action.join(' ')}`;
+    if (c.kind === 'stabilizer') return 'undetected, but harmless (a stabilizer)';
+    if (!flag(this, 'decoder')) return 'detected';
+    const corr = this.lookup.get(r.syndrome);
+    const rc = code.classify(r.error.mul(corr));
+    if (rc.kind === 'identity') return `detected; decoder applies ${corr.toLabelled(code.labels)} and recovers`;
+    if (rc.kind === 'stabilizer') return `detected; decoder applies ${corr.toLabelled(code.labels)}, and ${r.error.mul(corr).toLabelled(code.labels)} is a stabilizer, so it recovers (degenerate)`;
+    return `same syndrome as ${this.single.get(r.syndrome)}; decoder applies ${corr.toLabelled(code.labels)}, leaving ${rc.action.join(' ')}`;
+  }
+
+  /** One row per error: label, weight, each generator's outcome, the syndrome and the verdict. */
+  errorTable(rows) {
+    const code = this.code;
+    // With many stabilizers the ±1 columns are hidden on narrow screens; the syndrome column has the same bits.
+    const many = this.m > 4;
+    const use = (r) => { assignPauli(this.fig.err, r.error); this.fig.broadcast(); };
+    return h('div', { class: 'fit' }, h('table', { class: 'w-table' },
+      h('thead', {}, h('tr', {}, h('th', {}, 'error'), h('th', {}, 'weight'), code.stabilizers.map((s) => h('th', { class: many ? 'mono stab stab-col' : 'mono stab' }, s.toLabelled(code.labels))), h('th', {}, 'syndrome S'), h('th', {}, 'what happens'))),
+      h('tbody', {}, rows.map((r) => h('tr', {
+        class: code.classify(r.error).kind === 'logical' ? 'is-logical' : '',
+        'data-error': r.error.toString(),
+        tabindex: this.fig ? 0 : undefined,
+        role: this.fig ? 'button' : undefined,
+        title: this.fig ? 'Use this error in the other parts of the figure' : undefined,
+        onclick: this.fig ? () => use(r) : undefined,
+        onkeydown: this.fig ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); use(r); } } : undefined,
+      },
+        h('td', { class: 'mono' }, r.label), h('td', { class: 'mono' }, r.weight),
+        Array.from(r.syndrome).map((b) => h('td', { class: `mono${b === '1' ? ' lit' : ''}${many ? ' stab-col' : ''}` }, b === '1' ? '−1' : '+1')),
+        h('td', { class: 'mono' }, r.syndrome), h('td', {}, this.verdict(r)))))));
+  }
+
+  /**
+   * complete: every error the code can suffer, counted by weight and by outcome:
+   * syndrome 0…0 split into "no effect" (identity, stabilizers) and logical errors,
+   * then one column per non-zero syndrome. Clicking a count lists those errors.
+   */
+  initComplete() {
+    const code = this.code, zero = '0'.repeat(this.m);
+    this.zero = zero;
+    this.all = code.errorTable(this.ks, code.n);
+    for (const r of this.all) r.cat = r.syndrome !== zero ? r.syndrome : code.classify(r.error).kind === 'logical' ? 'logical' : 'none';
+    const detected = Array.from({ length: 2 ** this.m - 1 }, (_, i) => (i + 1).toString(2).padStart(this.m, '0'));
+    // order the detected syndromes as the single-qubit errors first produce them (10, 01, 11 for [[4,2,2]])
+    const firstSeen = (s) => { const i = this.all.findIndex((r) => r.syndrome === s); return i < 0 ? Infinity : i; };
+    this.cats = ['none', 'logical', ...detected.sort((a, b) => firstSeen(a) - firstSeen(b))];
+    this.sel = { w: 1, c: null };
+    this.renderComplete();
+  }
+
+  rowsFor(sel) {
+    return this.all.filter((r) => (sel.w === null || r.weight === sel.w) && (sel.c === null || r.cat === sel.c));
+  }
+
+  renderComplete() {
+    const code = this.code, n = code.n, zero = this.zero;
+    const count = (w, c) => this.rowsFor({ w, c }).length;
+    const pick = (sel) => { this.sel = sel; this.renderComplete(); this.querySelector('button.cell[aria-pressed="true"]')?.focus(); };
+    const same = (a, b) => a.w === b.w && a.c === b.c;
+    const cell = (w, c, cls = '') => {
+      const k = count(w, c);
+      const sel = { w, c };
+      return h('td', { class: `mono ${cls}` }, k === 0 ? h('span', { class: 'zero' }, '0')
+        : (w === null && c === null) ? String(k)
+        : h('button', { type: 'button', class: 'cell', 'aria-pressed': same(this.sel, sel) ? 'true' : 'false', onclick: () => pick(sel),
+          title: `List ${describe(sel, k)}` }, String(k)));
+    };
+    const catName = (c) => (c === 'none' ? 'syndrome ' + zero + ' and no effect' : c === 'logical' ? 'syndrome ' + zero + ' that act as logical operators' : 'syndrome ' + c);
+    const describe = (sel, k) => `${k === 1 ? 'the error' : `the ${k} errors`}${sel.w === null ? '' : ` of weight ${sel.w}`}${sel.c === null ? '' : ` with ${catName(sel.c)}`}`;
+    const nDet = this.cats.length - 2;
+    const sizes = [...new Set(this.cats.slice(2).map((c) => count(null, c)).concat(count(null, 'none') + count(null, 'logical')))];
+    const rows = this.rowsFor(this.sel);
+    this.replaceChildren(
+      header(this, attr(this, 'title', `${code.name}: every error, by weight and syndrome`)),
+      h('p', { class: 'w-meta' }, `All ${this.all.length} ${this.ks.join('/')} errors on ${n} qubits. Click a count to list those errors.`),
+      h('div', { class: 'fit' }, h('table', { class: 'w-table counts' },
+        h('thead', {},
+          h('tr', {}, h('th', { rowspan: 2 }, 'weight'), h('th', { rowspan: 2 }, 'errors'), h('th', { colspan: 2, class: 'group' }, `S = ${zero}, undetected`), h('th', { colspan: nDet, class: 'group' }, 'detected, S =')),
+          h('tr', {}, h('th', {}, 'no effect'), h('th', { class: 'bad' }, 'logical error'), this.cats.slice(2).map((c) => h('th', { class: 'mono' }, c)))),
+        h('tbody', {}, Array.from({ length: n + 1 }, (_, w) => h('tr', {},
+          h('th', { class: 'mono' }, w), cell(w, null), this.cats.map((c) => cell(w, c, c === 'logical' ? 'bad' : ''))))),
+        h('tfoot', {}, h('tr', {}, h('th', {}, 'all'), cell(null, null), this.cats.map((c) => cell(null, c, c === 'logical' ? 'bad' : '')))))),
+      h('p', { class: 'w-note' },
+        `The ${this.m} generators give ${2 ** this.m} syndromes${sizes.length === 1 ? `, and each holds ${sizes[0]} errors` : ''}. `,
+        `Syndrome ${zero} holds the identity and the stabilizers, which leave the code state alone, and the ${count(null, 'logical')} logical errors the checks cannot see; every other error is detected. `,
+        `The lightest logical error has weight ${Math.min(...this.rowsFor({ w: null, c: 'logical' }).map((r) => r.weight))}: that is the distance.`),
+      h('p', { class: 'w-meta list-head', 'aria-live': 'polite' }, `Listed: ${describe(this.sel, rows.length)}.`),
+      this.errorTable(rows),
+      this.fig ? h('p', { class: 'w-note' }, 'Click a row to apply that error in the other parts; an error set elsewhere selects its cell here.') : null);
+    this.highlight(false);
+  }
+
+  highlight(follow = true) {
     if (!this.fig) return;
     const current = this.fig.err.toString();
-    for (const tr of this.querySelectorAll('tbody tr')) tr.classList.toggle('current', tr.dataset.error === current);
+    if (follow && this.all) {
+      // follow the shared error: show the cell it belongs to, unless it is already listed
+      const r = this.all.find((x) => x.error.toString() === current);
+      if (r && !this.rowsFor(this.sel).includes(r)) { this.sel = { w: r.weight, c: r.cat }; this.renderComplete(); return; }
+    }
+    for (const tr of this.querySelectorAll('tbody tr[data-error]')) tr.classList.toggle('current', tr.dataset.error === current);
   }
 }
 

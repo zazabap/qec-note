@@ -289,6 +289,15 @@ ol.refs .why { display: block; color: var(--muted); font-size: 0.93em; }
 .w-table td.lit { background: var(--x-tint); font-weight: 600; }
 .w-table tr.lit td { background: var(--tint); }
 .w-table tr.is-logical td { color: var(--bad); }
+.w-table.counts th.group { text-align: center; border-bottom: 1px solid var(--rule); }
+.w-table.counts td, .w-table.counts tbody th, .w-table.counts tfoot th { text-align: right; }
+.w-table.counts .bad { color: var(--bad); }
+.w-table.counts .zero { color: var(--rule); }
+.w-table.counts tfoot th, .w-table.counts tfoot td { border-top: 1px solid var(--ink); font-weight: 600; }
+.qec-widget .w-table button.cell { font: inherit; color: inherit; background: none; border: 1px solid transparent; border-radius: 3px; padding: 0 0.35rem; text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
+.qec-widget .w-table button.cell:hover { border-color: var(--rule); background: var(--tint); }
+.qec-widget .w-table button.cell[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); text-decoration: none; }
+.list-head { margin-top: 1rem; color: var(--ink); font-weight: 600; }
 .w-table.readout { margin-top: 0.6rem; }
 
 @media (max-width: 520px) {
