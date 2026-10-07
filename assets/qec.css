@@ -59,7 +59,7 @@ footer { margin-top: 3.5rem; padding-top: 1rem; border-top: 1px solid var(--rule
 
 /* ---------------------------------------------------------- widgets */
 
-.qec-widget { display: block; margin: 1.75rem 0 2rem; padding: 0.9rem 0 1rem; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule); font-family: var(--sans); font-size: 0.92rem; line-height: 1.45; }
+.qec-widget, .fig-static { display: block; margin: 1.75rem 0 2rem; padding: 0.9rem 0 1rem; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule); font-family: var(--sans); font-size: 0.92rem; line-height: 1.45; }
 .w-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 0.8rem; }
 .w-kicker { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
 .w-title { font-weight: 650; }
@@ -151,6 +151,12 @@ summary { cursor: pointer; color: var(--muted); }
 .circuit .outcome { font-family: var(--mono); font-size: 13px; font-weight: 700; fill: var(--ink); }
 .circuit .stage-brace { fill: none; stroke: var(--muted); stroke-width: 1; }
 .circuit .stage-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; fill: var(--muted); }
+.circuit .sub { font-size: 0.75em; }
+.circuit .sub2 { font-size: 0.85em; }
+.circuit .bundle { font-family: var(--mono); font-size: 10px; fill: var(--muted); }
+.circuit .dots { font-size: 14px; fill: var(--ink); }
+.circuit .gap { fill: var(--paper); }
+.fig-static figcaption { margin-top: 0.4rem; }
 
 /* branches */
 .branches { margin: 0.4rem 0; }

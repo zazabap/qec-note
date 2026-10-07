@@ -42,11 +42,11 @@ window.MathJax = {
 <main>
 <p class="crumbs">Notes on quantum error correction · Part 2 · follows Roffe, sections 4 to 4.4 · previous: <a href="01-quantum-redundancy.html">Part 1</a> · next: <a href="03-shor-code.html">Part 3</a></p>
 <h1>The stabilizer formalism</h1>
-<p class="lead">Part 1 built codes one stabilizer at a time. Section 4 turns the recipe into a framework: a code is a commuting set of Pauli operators, its logical qubits are what those operators leave free, and the syndrome is a list of commutation signs. This part covers the framework and its smallest example; <a href="03-shor-code.html">part 3</a> uses it to correct errors. The <a href="#figures">interactive figure</a> is at the end.</p>
+<p class="lead">Part 1 built codes one stabilizer at a time. Section 4 turns the recipe into a framework: a code is a commuting set of Pauli operators, its logical qubits are what those operators leave free, and the syndrome is a list of commutation signs. This part covers the framework and its smallest example; <a href="03-shor-code.html">part 3</a> uses it to correct errors. The <a href="#figures">figures</a> are at the end.</p>
 
 <p class="eyebrow">Roffe §4</p>
 <h2>The [[n, k, d]] stabilizer code</h2>
-<p>A register of \(k\) data qubits is entangled with \(m = n - k\) redundancy qubits to form \(\ket\psi_\L\) (paper's figure 4), and each of \(m\) stabilizers \(P_i\) is measured with the ancilla circuit of part 1:</p>
+<p>A register of \(k\) data qubits is entangled with \(m = n - k\) redundancy qubits to form \(\ket\psi_\L\) (<a href="#fig-a">figure A</a>, after the paper's figure 4), and each of \(m\) stabilizers \(P_i\) is measured with the ancilla circuit of part 1:</p>
 \[
 E\ket\psi_\L\ket0_{A_i} \;\longmapsto\;
 \tfrac12(\I^{\otimes n} + P_i)\,E\ket\psi_\L\ket0_{A_i} + \tfrac12(\I^{\otimes n} - P_i)\,E\ket\psi_\L\ket1_{A_i} .
@@ -110,17 +110,101 @@ E\ket\psi_\L\ket0_{A_i} \;\longmapsto\;
 <p>and the other codewords follow by applying logical \(\bar X\) operators. In hardware the projection is the syndrome-extraction circuit run on \(\ket{0^{\otimes n}}\); each ancilla then reads 0 or 1 with equal probability, as eq. 36 shows for \(X_1X_2X_3X_4\), and a 1 is fixed by an operator that anticommutes with that stabilizer only.</p>
 <p>Eq. 34 fixes the codespace but not, in general, the logical value; for the \([[4,2,2]]\) code the two coincide. <a href="03-shor-code.html">Part 3</a> shows a code where they do not.</p>
 
-<h2 id="figures">Interactive figure</h2>
-<p>Part A.1 is the circuit of the paper's figure 5: an encoder for two data qubits, the error, and the measurement of \(Z_1Z_2Z_3Z_4\) and \(X_1X_2X_3X_4\) with one ancilla each; step through it gate by gate. Click a qubit to cycle through \(X\), \(Z\) and \(Y\) errors, or click a table row; the parts share one error. The bars are drawn in the code's own basis: the codespace \(\C\) in its logical basis \(\ket{j}_\L\), and the error space the syndrome points to as \(R\cdot\C\), where \(R\) is the lightest error with that syndrome. So the bars show what the error did to the <em>encoded</em> information: identical to the input when undoing \(R\) would recover it, visibly changed when it would not. Try \(X_1\), then \(X_2\): same syndrome, different logical content. \(Y\) is applied as \(ZX = iY\); the global phase is invisible.</p>
+<h2 id="figures">Figures</h2>
+<p>Figure A is the general circuit of an \([[n, k, d]]\) stabilizer code. Figure B is the same circuit for the \([[4,2,2]]\) code, where it can be run.</p>
 
-<qec-figure code="four-two-two" label="A" error="XIII" title="The [[4,2,2]] detection code">
+<figure class="fig-static" id="fig-a">
+<div class="w-head"><span class="w-kicker">Figure A</span><span class="w-title">The structure of an [[n, k, d]] stabilizer code (after the paper's figure 4)</span></div>
+<svg class="circuit" viewBox="0 0 656 296" style="max-width:656px" role="img" aria-label="Circuit of an [[n, k, d]] stabilizer code. A k-qubit data register and n minus k redundancy qubits enter an encoder, giving the logical state; an error E acts on the n-qubit register; then each of n minus k ancillas, prepared in zero, has a Hadamard, controls one stabilizer P_i on the register, has a second Hadamard and is measured, giving syndrome bits s_1 to s_(n minus k).">
+  <path d="M102,14 V10 H170 V14" class="stage-brace"/>
+  <text x="136" y="7" text-anchor="middle" class="stage-label">Encoder</text>
+  <path d="M210,14 V10 H250 V14" class="stage-brace"/>
+  <text x="230" y="7" text-anchor="middle" class="stage-label">Error</text>
+  <path d="M266,14 V10 H606 V14" class="stage-brace"/>
+  <text x="436" y="7" text-anchor="middle" class="stage-label">Syndrome extraction</text>
+  <line x1="76" x2="644" y1="50" y2="50" class="wire"/>
+  <text x="72" y="54" text-anchor="end" class="wire-label">|ψ⟩<tspan class="sub" dy="3">D</tspan></text>
+  <path d="M86,56 L94,44" class="vline"/>
+  <text x="90" y="41" text-anchor="middle" class="bundle">k</text>
+  <line x1="76" x2="644" y1="90" y2="90" class="wire"/>
+  <text x="72" y="94" text-anchor="end" class="wire-label">|0⟩<tspan class="sub" dy="3">R</tspan></text>
+  <path d="M86,96 L94,84" class="vline"/>
+  <text x="90" y="81" text-anchor="middle" class="bundle">n−k</text>
+  <line x1="76" x2="590" y1="150" y2="150" class="wire"/>
+  <text x="72" y="154" text-anchor="end" class="wire-label">|0⟩<tspan class="sub" dy="3">A<tspan class='sub2' dy='2'>1</tspan></tspan></text>
+  <text x="612" y="154" class="outcome">s<tspan class="sub" dy="3">1</tspan></text>
+  <line x1="76" x2="590" y1="190" y2="190" class="wire"/>
+  <text x="72" y="194" text-anchor="end" class="wire-label">|0⟩<tspan class="sub" dy="3">A<tspan class='sub2' dy='2'>2</tspan></tspan></text>
+  <text x="612" y="194" class="outcome">s<tspan class="sub" dy="3">2</tspan></text>
+  <line x1="76" x2="590" y1="270" y2="270" class="wire"/>
+  <text x="72" y="274" text-anchor="end" class="wire-label">|0⟩<tspan class="sub" dy="3">A<tspan class='sub2' dy='2'>n−k</tspan></tspan></text>
+  <text x="612" y="274" class="outcome">s<tspan class="sub" dy="3">n−k</tspan></text>
+  <text x="60" y="235" text-anchor="middle" class="dots">⋮</text>
+  <text x="282" y="235" text-anchor="middle" class="dots">⋮</text>
+  <text x="538" y="235" text-anchor="middle" class="dots">⋮</text>
+  <text x="590" y="235" text-anchor="middle" class="dots">⋮</text>
+  <rect x="106" y="34" width="60" height="72" rx="2" class="gate"/>
+  <text x="136" y="74" text-anchor="middle" class="gate-label">Encoder</text>
+  <text x="190" y="40" text-anchor="middle" class="wire-label">|ψ⟩<tspan class="sub" dy="3">L</tspan></text>
+  <rect x="214" y="35" width="32" height="70" rx="3" class="ebox"/>
+  <text x="230" y="74" text-anchor="middle" class="gate-label">E</text>
+  <rect x="271" y="139" width="22" height="22" class="gate"/>
+  <text x="282" y="154" text-anchor="middle" class="gate-label">H</text>
+  <rect x="271" y="179" width="22" height="22" class="gate"/>
+  <text x="282" y="194" text-anchor="middle" class="gate-label">H</text>
+  <rect x="271" y="259" width="22" height="22" class="gate"/>
+  <text x="282" y="274" text-anchor="middle" class="gate-label">H</text>
+  <rect x="527" y="139" width="22" height="22" class="gate"/>
+  <text x="538" y="154" text-anchor="middle" class="gate-label">H</text>
+  <rect x="527" y="179" width="22" height="22" class="gate"/>
+  <text x="538" y="194" text-anchor="middle" class="gate-label">H</text>
+  <rect x="527" y="259" width="22" height="22" class="gate"/>
+  <text x="538" y="274" text-anchor="middle" class="gate-label">H</text>
+  <line x1="334" x2="334" y1="150" y2="103" class="vline"/>
+  <circle cx="334" cy="150" r="4" class="ctrl"/>
+  <rect x="314" y="37" width="40" height="66" rx="2" class="gate"/>
+  <text x="334" y="74" text-anchor="middle" class="gate-label">P<tspan class="sub" dy="3">1</tspan></text>
+  <line x1="386" x2="386" y1="190" y2="103" class="vline"/>
+  <circle cx="386" cy="190" r="4" class="ctrl"/>
+  <rect x="366" y="37" width="40" height="66" rx="2" class="gate"/>
+  <text x="386" y="74" text-anchor="middle" class="gate-label">P<tspan class="sub" dy="3">2</tspan></text>
+  <line x1="486" x2="486" y1="270" y2="103" class="vline"/>
+  <circle cx="486" cy="270" r="4" class="ctrl"/>
+  <rect x="466" y="37" width="40" height="66" rx="2" class="gate"/>
+  <text x="486" y="74" text-anchor="middle" class="gate-label">P<tspan class='sub2' dy='3'>n−k</tspan></text>
+  <rect x="424" y="43" width="24" height="14" class="gap"/>
+  <text x="436" y="54" text-anchor="middle" class="dots">⋯</text>
+  <rect x="424" y="83" width="24" height="14" class="gap"/>
+  <text x="436" y="94" text-anchor="middle" class="dots">⋯</text>
+  <rect x="424" y="143" width="24" height="14" class="gap"/>
+  <text x="436" y="154" text-anchor="middle" class="dots">⋯</text>
+  <rect x="424" y="183" width="24" height="14" class="gap"/>
+  <text x="436" y="194" text-anchor="middle" class="dots">⋯</text>
+  <rect x="424" y="263" width="24" height="14" class="gap"/>
+  <text x="436" y="274" text-anchor="middle" class="dots">⋯</text>
+  <rect x="577" y="139" width="26" height="22" class="gate"/>
+  <path d="M582,155 A8,8 0 0 1 598,155" class="meter-arc"/>
+  <line x1="590" y1="155" x2="596" y2="146" class="meter-needle"/>
+  <rect x="577" y="179" width="26" height="22" class="gate"/>
+  <path d="M582,195 A8,8 0 0 1 598,195" class="meter-arc"/>
+  <line x1="590" y1="195" x2="596" y2="186" class="meter-needle"/>
+  <rect x="577" y="259" width="26" height="22" class="gate"/>
+  <path d="M582,275 A8,8 0 0 1 598,275" class="meter-arc"/>
+  <line x1="590" y1="275" x2="596" y2="266" class="meter-needle"/>
+</svg>
+<figcaption>\(k\) data qubits \(\ket\psi_D\) and \(n-k\) redundancy qubits \(\ket0_R\) enter the encoder, which outputs the code state \(\ket\psi_\L\) on \(n\) qubits; a slash marks a bundle of qubits, with the bundle's size above it. The error \(E\) acts on that register. Each stabilizer \(P_i\) is then measured with its own ancilla \(A_i\): a Hadamard, \(P_i\) applied to the register when \(A_i\) is 1, a second Hadamard and a measurement, which is eq. 29. The \(n-k\) outcomes \(s_1 \ldots s_{n-k}\) form the syndrome.</figcaption>
+</figure>
+
+<p>Part B.1 is the circuit of the paper's figure 5: an encoder for two data qubits, the error, and the measurement of \(Z_1Z_2Z_3Z_4\) and \(X_1X_2X_3X_4\) with one ancilla each; step through it gate by gate. Click a qubit to cycle through \(X\), \(Z\) and \(Y\) errors, or click a table row; the parts share one error. The bars are drawn in the code's own basis: the codespace \(\C\) in its logical basis \(\ket{j}_\L\), and the error space the syndrome points to as \(R\cdot\C\), where \(R\) is the lightest error with that syndrome. So the bars show what the error did to the <em>encoded</em> information: identical to the input when undoing \(R\) would recover it, visibly changed when it would not. Try \(X_1\), then \(X_2\): same syndrome, different logical content. \(Y\) is applied as \(ZX = iY\); the global phase is invisible.</p>
+
+<qec-figure code="four-two-two" label="B" error="XIII" title="The [[4,2,2]] detection code">
   <qec-circuit code="four-two-two" allowed="XZY" logical title="Encoder, error and syndrome extraction (paper's figure 5)"></qec-circuit>
   <qec-syndrome-table code="four-two-two" errors="XZY" max-weight="1" title="Every single-qubit error (paper's table 3)"></qec-syndrome-table>
   <qec-projection code="four-two-two" title="The codewords by projection (eq. 34, 35)"></qec-projection>
 </qec-figure>
 </main>
 <footer>
-<p>Part 2 of <a href="index.html">Notes on quantum error correction</a>, by Shiwen An. The structure follows Joschka Roffe, <em>Quantum error correction: an introductory guide</em>, Contemporary Physics 60, 226 (2019), <a href="https://arxiv.org/abs/1907.11157">arXiv:1907.11157</a>, sections 4 to 4.4; equation numbers in the margins refer to it. The text, figures and code here are original. Text under CC BY 4.0, code under the MIT licence. Revised 23 September 2026.</p>
+<p>Part 2 of <a href="index.html">Notes on quantum error correction</a>, by Shiwen An. The structure follows Joschka Roffe, <em>Quantum error correction: an introductory guide</em>, Contemporary Physics 60, 226 (2019), <a href="https://arxiv.org/abs/1907.11157">arXiv:1907.11157</a>, sections 4 to 4.4; equation numbers in the margins refer to it. The text, figures and code here are original. Text under CC BY 4.0, code under the MIT licence. Revised 7 October 2026.</p>
 </footer>
 </div>
 </body>
