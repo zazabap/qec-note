@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Quantum LDPC Codes</title>
-<meta name="description" content="Quantum low-density parity-check codes: why sparse checks matter, the hypergraph product, and belief-propagation decoding and its failures, with an interactive hypergraph-product lattice. Part 5 of a set of notes on quantum error correction.">
+<meta name="description" content="Quantum low-density parity-check codes: why sparse checks matter, the hypergraph product, and belief-propagation decoding and its failures, with an interactive hypergraph-product lattice. Part 4 of a set of notes on quantum error correction.">
 <link rel="stylesheet" href="assets/qec.css?v=20261007c">
 <script>
 window.MathJax = {
@@ -40,7 +40,7 @@ window.MathJax = {
   <span class="right"><a href="https://zazabap.github.io">zazabap.github.io</a></span>
 </nav>
 <main>
-<p class="crumbs">Notes on quantum error correction · Part 5 · beyond Roffe's guide · previous: <a href="04-css-codes.html">Part 4</a></p>
+<p class="crumbs">Notes on quantum error correction · Part 4 · beyond Roffe's guide · previous: <a href="03-css-codes.html">Part 3</a></p>
 <h1>Quantum LDPC codes</h1>
 <p class="lead">A code is low-density parity-check (LDPC) when every check touches only a few qubits and every qubit sits in only a few checks, however large the code grows. The surface code is one, but it encodes a single qubit. This part asks how to keep the checks small while encoding many qubits, builds the simplest general answer, the hypergraph product, and decodes it with belief propagation. The <a href="#figures">interactive figure</a> is at the end, followed by <a href="#references">references</a>.</p>
 
@@ -49,7 +49,7 @@ window.MathJax = {
 <p>The surface code is LDPC with \(w = 4\) but has \(k = 1\) and \(d \sim \sqrt n\). That is not an accident of design: any stabilizer code whose checks are local on a two-dimensional lattice obeys \(k d^2 = O(n)\) (Bravyi, Poulin and Terhal 2010). Encoding many qubits at large distance with small checks therefore requires checks that are not local in the plane, and a construction that controls both \(k\) and \(d\).</p>
 
 <h2>Why not take two classical LDPC codes?</h2>
-<p>Part 4 builds a CSS code from any \(H_X, H_Z\) with \(H_X H_Z^{\mathsf T} = 0\). Two independently chosen sparse matrices almost never satisfy that, and choosing \(H_X = H_Z = H\) with \(H H^{\mathsf T} = 0\) forces the classical code to contain its own dual, which for sparse \(H\) puts low-weight words among the logical operators. Early constructions such as the bicycle codes of MacKay, Mitchison and McFadden (2004) designed matrices around this condition. The hypergraph product meets it by construction.</p>
+<p>Part 3 builds a CSS code from any \(H_X, H_Z\) with \(H_X H_Z^{\mathsf T} = 0\). Two independently chosen sparse matrices almost never satisfy that, and choosing \(H_X = H_Z = H\) with \(H H^{\mathsf T} = 0\) forces the classical code to contain its own dual, which for sparse \(H\) puts low-weight words among the logical operators. Early constructions such as the bicycle codes of MacKay, Mitchison and McFadden (2004) designed matrices around this condition. The hypergraph product meets it by construction.</p>
 
 <h2>The hypergraph product</h2>
 <p>Given two classical codes with parity-check matrices \(H_1\) (\(m_1 \times n_1\)) and \(H_2\) (\(m_2 \times n_2\)), Tillich and Zémor define</p>
@@ -85,7 +85,7 @@ d &= \min\bigl(d_1, d_2, d_1^{\mathsf T}, d_2^{\mathsf T}\bigr),
 <p>The \(\sqrt N\) distance of the hypergraph product was a barrier for a decade. Lifted-product and related constructions, which replace the entries of the matrices by elements of a group algebra, removed it: Panteleev and Kalachev (2022) gave families with \(k \propto N\) and \(d \propto N\), asymptotically good quantum LDPC codes. On the practical side, codes with constant rate reduce the overhead of fault tolerance to a constant factor (Gottesman 2013), and small quasi-cyclic codes such as the bivariate bicycle codes are designed for hardware with a few long-range couplers per qubit. Breuckmann and Eberhardt's review covers these constructions.</p>
 
 <h2>Decoding with belief propagation</h2>
-<p>By part 4, decoding \(X\) errors means solving \(H_Z \hat e = s_Z\) for a likely \(\hat e\), a classical problem on the Tanner graph of \(H_Z\) (qubits on one side, checks on the other). Belief propagation passes log-likelihood ratios along its edges. Each qubit starts from \(L_0 = \ln\frac{1-p}{p}\). In the min-sum form used in the figure, a check \(c\) with syndrome bit \(s_c\) tells each neighbour \(v\)</p>
+<p>By part 3, decoding \(X\) errors means solving \(H_Z \hat e = s_Z\) for a likely \(\hat e\), a classical problem on the Tanner graph of \(H_Z\) (qubits on one side, checks on the other). Belief propagation passes log-likelihood ratios along its edges. Each qubit starts from \(L_0 = \ln\frac{1-p}{p}\). In the min-sum form used in the figure, a check \(c\) with syndrome bit \(s_c\) tells each neighbour \(v\)</p>
 \[
 r_{c\to v} = (-1)^{s_c}\,\alpha\goodbreak \prod_{v' \in N(c)\setminus v} \operatorname{sgn} q_{v'\to c} \;\goodbreak\min_{v' \in N(c)\setminus v} |q_{v'\to c}| ,
 \]
@@ -120,7 +120,7 @@ L_v = L_0 + \sum_{c \in N(v)} r_{c\to v}, \qquad q_{v\to c} = L_v - r_{c\to v},
 </ol>
 </main>
 <footer>
-<p>Part 5 of <a href="index.html">Notes on quantum error correction</a>, by Shiwen An. The construction goes beyond Joschka Roffe, <em>Quantum error correction: an introductory guide</em>, <a href="https://arxiv.org/abs/1907.11157">arXiv:1907.11157</a>, which parts 1 to 3 follow; see the references above. The text, figures and code here are original. Text under CC BY 4.0, code under the MIT licence. Revised 24 September 2026.</p>
+<p>Part 4 of <a href="index.html">Notes on quantum error correction</a>, by Shiwen An. The construction goes beyond Joschka Roffe, <em>Quantum error correction: an introductory guide</em>, <a href="https://arxiv.org/abs/1907.11157">arXiv:1907.11157</a>, which parts 1 and 2 follow; see the references above. The text, figures and code here are original. Text under CC BY 4.0, code under the MIT licence. Revised 24 September 2026.</p>
 </footer>
 </div>
 </body>

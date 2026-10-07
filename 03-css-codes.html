@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>CSS Codes</title>
-<meta name="description" content="CSS codes from pairs of classical codes: the commutation condition, separate decoding of X and Z errors, and the Steane [[7,1,3]] code, with interactive parity-check matrices and a code builder. Part 4 of a set of notes on quantum error correction.">
+<meta name="description" content="CSS codes from pairs of classical codes: the commutation condition, separate decoding of X and Z errors, and the Steane [[7,1,3]] code, with interactive parity-check matrices and a code builder. Part 3 of a set of notes on quantum error correction.">
 <link rel="stylesheet" href="assets/qec.css?v=20261007c">
 <script>
 window.MathJax = {
@@ -40,7 +40,7 @@ window.MathJax = {
   <span class="right"><a href="https://zazabap.github.io">zazabap.github.io</a></span>
 </nav>
 <main>
-<p class="crumbs">Notes on quantum error correction · Part 4 · beyond Roffe's guide · previous: <a href="03-shor-code.html">Part 3</a> · next: <a href="05-qldpc-codes.html">Part 5</a></p>
+<p class="crumbs">Notes on quantum error correction · Part 3 · beyond Roffe's guide · previous: <a href="02-stabilizer-formalism.html">Part 2</a> · next: <a href="04-qldpc-codes.html">Part 4</a></p>
 <h1>CSS codes</h1>
 <p class="lead">Every code so far has had stabilizers made only of \(X\)s or only of \(Z\)s. Codes with that property are CSS codes, after Calderbank, Shor and Steane, and they are built from two classical codes: one to catch bit flips, one to catch phase flips. The <a href="#figures">interactive figures</a> are at the end; the <a href="#references">references</a> list where to read further.</p>
 
@@ -85,7 +85,7 @@ d_Z &= \min\{ |v| : v \in \ker H_X \setminus \operatorname{row} H_Z \} .
 <p>giving an \([[n,\, k_1 - k_2,\, d]]\) code with \(d \ge \min\bigl(d(C_1), d(C_2^\perp)\bigr)\). Calderbank and Shor used this to show that families of quantum codes with nonzero rate and nonzero relative distance exist.</p>
 
 <h2>Decoding in two halves</h2>
-<p>Because \(s_Z\) sees only \(e_X\) and \(s_X\) sees only \(e_Z\), decoding a CSS code is two classical decoding problems: find \(\hat e_X\) with \(H_Z \hat e_X = s_Z\), and \(\hat e_Z\) with \(H_X \hat e_Z = s_X\). Any classical decoder for the two component codes can be reused. The price is that a \(Y\) error, which is correlated across the two halves, is treated as an independent \(X\) and \(Z\). This split is what makes CSS codes the default setting for the LDPC codes of <a href="05-qldpc-codes.html">part 5</a>.</p>
+<p>Because \(s_Z\) sees only \(e_X\) and \(s_X\) sees only \(e_Z\), decoding a CSS code is two classical decoding problems: find \(\hat e_X\) with \(H_Z \hat e_X = s_Z\), and \(\hat e_Z\) with \(H_X \hat e_Z = s_X\). Any classical decoder for the two component codes can be reused. The price is that a \(Y\) error, which is correlated across the two halves, is treated as an independent \(X\) and \(Z\). This split is what makes CSS codes the default setting for the LDPC codes of <a href="04-qldpc-codes.html">part 4</a>.</p>
 
 <h2>The Steane code</h2>
 <p>Choosing \(C_1\) the Hamming code and \(C_2 = C_1^\perp\) the simplex code gives \(H_X = H_Z = H_{\text{Ham}}\), and the \([[7,1,3]]\) Steane code:</p>
@@ -99,7 +99,7 @@ d_Z &= \min\{ |v| : v \in \ker H_X \setminus \operatorname{row} H_Z \} .
 <p>\(\ket0_\L\) is the sum over the eight simplex codewords, the all-zero word and the seven words of weight four. \(X^{\otimes7}\) has weight seven, but multiplying by a weight-four stabilizer leaves a weight-three representative, which is the distance. Every single-qubit error is corrected, and the decoder is the Hamming decoder twice: an \(X\) error on qubit \(j\) gives \(s_Z = j\) in binary, a \(Z\) error gives \(s_X = j\), and a \(Y\) gives both. Because \(H_X = H_Z\), swapping \(X\) and \(Z\) maps the code to itself, which is why a transversal Hadamard, \(H\) on every qubit, implements a logical Hadamard. CSS codes in general also have a transversal logical CNOT between two blocks.</p>
 
 <h2>Codes from earlier parts, as CSS codes</h2>
-<p>The three-qubit code of part 1 has \(H_Z = \begin{pmatrix}1&1&0\\0&1&1\end{pmatrix}\) and no \(X\) checks. The \([[4,2,2]]\) code of part 2 has \(H_X = H_Z = (1\,1\,1\,1)\). The Shor code of part 3 has six rows of weight two in \(H_Z\), one per pair inside a block, and two rows of weight six in \(H_X\); the first figure shows all three.</p>
+<p>The three-qubit code of part 1 has \(H_Z = \begin{pmatrix}1&1&0\\0&1&1\end{pmatrix}\) and no \(X\) checks. The \([[4,2,2]]\) code of part 2 has \(H_X = H_Z = (1\,1\,1\,1)\). The Shor code, also in part 2, has six rows of weight two in \(H_Z\), one per pair inside a block, and two rows of weight six in \(H_X\); the first figure shows all three.</p>
 
 <h2 id="figures">Interactive figures</h2>
 <p>Figure A shows a CSS code as its two check matrices. Click a qubit to cycle through \(X\), \(Z\) and \(Y\): the \(X\) part of the error lights the rows of \(H_Z\) it anticommutes with, the \(Z\) part those of \(H_X\), and the decoder solves each half on its own. It opens on the Steane code with \(X_5\): the syndrome \(s_Z = 101\) is 5 in binary. Switch to the \([[4,2,2]]\) code to see a syndrome that matches every column.</p>
@@ -115,11 +115,11 @@ d_Z &= \min\{ |v| : v \in \ker H_X \setminus \operatorname{row} H_Z \} .
 <li>A. M. Steane, “Simple quantum error-correcting codes”, <em>Phys. Rev. A</em> <b>54</b>, 4741 (1996). <a href="https://arxiv.org/abs/quant-ph/9605021">arXiv:quant-ph/9605021</a> · <a href="https://doi.org/10.1103/PhysRevA.54.4741">doi</a><span class="why">Further small CSS codes and how to find them.</span></li>
 <li>D. Gottesman, <em>Stabilizer codes and quantum error correction</em>, PhD thesis, Caltech (1997). <a href="https://arxiv.org/abs/quant-ph/9705052">arXiv:quant-ph/9705052</a><span class="why">The stabilizer formalism in full, with CSS codes as a special case and transversal gates.</span></li>
 <li>M. A. Nielsen and I. L. Chuang, <em>Quantum Computation and Quantum Information</em>, Cambridge University Press (2000; 10th anniversary edition 2010), section 10.4.2.<span class="why">Textbook treatment of classical linear codes, CSS codes and the Steane code.</span></li>
-<li>J. Roffe, “Quantum error correction: an introductory guide”, <em>Contemporary Physics</em> <b>60</b>, 226 (2019). <a href="https://arxiv.org/abs/1907.11157">arXiv:1907.11157</a> · <a href="https://doi.org/10.1080/00107514.2019.1667078">doi</a><span class="why">The introductory guide that parts 1 to 3 follow.</span></li>
+<li>J. Roffe, “Quantum error correction: an introductory guide”, <em>Contemporary Physics</em> <b>60</b>, 226 (2019). <a href="https://arxiv.org/abs/1907.11157">arXiv:1907.11157</a> · <a href="https://doi.org/10.1080/00107514.2019.1667078">doi</a><span class="why">The introductory guide that parts 1 and 2 follow.</span></li>
 </ol>
 </main>
 <footer>
-<p>Part 4 of <a href="index.html">Notes on quantum error correction</a>, by Shiwen An. The construction goes beyond Joschka Roffe, <em>Quantum error correction: an introductory guide</em>, <a href="https://arxiv.org/abs/1907.11157">arXiv:1907.11157</a>, which parts 1 to 3 follow; see the references above. The text, figures and code here are original. Text under CC BY 4.0, code under the MIT licence. Revised 24 September 2026.</p>
+<p>Part 3 of <a href="index.html">Notes on quantum error correction</a>, by Shiwen An. The construction goes beyond Joschka Roffe, <em>Quantum error correction: an introductory guide</em>, <a href="https://arxiv.org/abs/1907.11157">arXiv:1907.11157</a>, which parts 1 and 2 follow; see the references above. The text, figures and code here are original. Text under CC BY 4.0, code under the MIT licence. Revised 24 September 2026.</p>
 </footer>
 </div>
 </body>
