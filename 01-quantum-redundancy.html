@@ -23,11 +23,12 @@ window.MathJax = {
       span: '\\operatorname{span}'
     }
   },
+  output: { displayOverflow: 'linebreak' },
   svg: { fontCache: 'global' },
   options: { ignoreHtmlClass: 'qec-widget', skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
 };
 </script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-svg.js"></script>
 <script type="module" src="assets/widgets.js"></script>
 </head>
 <body>
@@ -53,10 +54,12 @@ window.MathJax = {
 \]
 <p>Nothing is copied; the amplitudes are shared by an entangled pair. The state now lives in the <em>codespace</em> \(\C\), a two-dimensional slice of \(\H_4\), and a bit flip on either qubit moves it into the orthogonal <em>error space</em> \(\F\):</p>
 \[
-\C = \span\{\ket{00}, \ket{11}\}, \qquad
-\F = \span\{\ket{01}, \ket{10}\}, \qquad
-X_1\ket\psi_\L = \alpha\ket{10} + \beta\ket{01} \in \F .
+\begin{aligned}
+\C &= \span\{\ket{00}, \ket{11}\}, \\
+\F &= \span\{\ket{01}, \ket{10}\}, \\
+X_1\ket\psi_\L &= \alpha\ket{10} + \beta\ket{01} \in \F .
 \qquad\text{(eq. 14–17)}
+\end{aligned}
 \]
 <p>The <em>stabilizer</em> \(Z_1Z_2\) is \(+1\) on \(\C\) and \(-1\) on \(\F\), so measuring it projects onto a subspace without distinguishing \(\ket{00}\) from \(\ket{11}\): \(\alpha\) and \(\beta\) survive (eq. 18). The measurement uses an ancilla, a Hadamard, a controlled-\(Z_1Z_2\) and a second Hadamard (paper's figure 2):</p>
 \[
@@ -86,11 +89,13 @@ p_L = \frac{p_X^2}{(1 - p_X)^2 + p_X^2} \approx p_X^2 .
 <h2>The three-qubit code</h2>
 <p>Two CNOTs give \(\ket\psi_\L = \alpha\ket{000} + \beta\ket{111}\), and the eight-dimensional space splits into</p>
 \[
-\C = \span\{\ket{000}, \ket{111}\},\;
-\F_1 = \span\{\ket{100}, \ket{011}\},\;
-\F_2 = \span\{\ket{010}, \ket{101}\},\;
-\F_3 = \span\{\ket{001}, \ket{110}\},
+\begin{aligned}
+\C &= \span\{\ket{000}, \ket{111}\}, \\
+\F_1 &= \span\{\ket{100}, \ket{011}\}, \\
+\F_2 &= \span\{\ket{010}, \ket{101}\}, \\
+\F_3 &= \span\{\ket{001}, \ket{110}\},
 \qquad\text{(eq. 25)}
+\end{aligned}
 \]
 <p>with \(X_i\ket\psi_\L \in \F_i\). The stabilizers \(Z_1Z_2\) and \(Z_2Z_3\) read \((-,+)\), \((-,-)\), \((+,-)\) on \(\F_1, \F_2, \F_3\), so the two-bit syndrome names the flipped qubit and a lookup table undoes it (paper's figure 3, table 2). Eight bit-flip patterns share four syndromes: each weight-two pattern looks like the single flip on the remaining qubit, the decoder completes it to \(X_1X_2X_3 = \bar X\), and the code fails exactly as a classical majority vote does. With the coherent error of eq. 20 on every qubit, the failing terms are the three double flips and the triple flip, so every run is kept and</p>
 \[
@@ -105,8 +110,11 @@ p_L = 3p_X^2(1 - p_X) + p_X^3 = 3p_X^2 - 2p_X^3 ,
 <h2>Quantum code distance</h2>
 <p>The distance \(d\) is the weight of the lightest logical operator, the smallest undetected error that changes the encoded state. For bit flips alone the three-qubit code has \(\bar X = X_1X_2X_3\) (eq. 26), so \(d = 3\) and it corrects \(t = \lfloor (d-1)/2\rfloor = 1\) flip. In the conjugate basis \(\ket\pm = (\ket0 \pm \ket1)/\sqrt2\), where \(Z\ket\pm = \ket\mp\) (eq. 27),</p>
 \[
-\ket\pm_\L = \tfrac{1}{\sqrt2}\bigl(\ket{000} \pm \ket{111}\bigr), \qquad Z_1\ket+_\L = \ket-_\L .
+\begin{aligned}
+\ket\pm_\L &= \tfrac{1}{\sqrt2}\bigl(\ket{000} \pm \ket{111}\bigr), \\
+Z_1\ket+_\L &= \ket-_\L .
 \qquad\text{(eq. 28)}
+\end{aligned}
 \]
 <p>Both stabilizers commute with \(Z_1\), so the syndrome stays 00: \(\bar Z = Z_1\) has weight one and the quantum distance is \(d = 1\). Catching \(Z\) errors needs stabilizers built from \(X\)s, and catching both needs commuting stabilizers of both types, which is the stabilizer formalism of section 4 and part 2 of these notes, and from there CSS and quantum LDPC codes.</p>
 

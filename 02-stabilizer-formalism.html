@@ -23,11 +23,12 @@ window.MathJax = {
       span: '\\operatorname{span}'
     }
   },
+  output: { displayOverflow: 'linebreak' },
   svg: { fontCache: 'global' },
   options: { ignoreHtmlClass: 'qec-widget', skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
 };
 </script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-svg.js"></script>
 <script type="module" src="assets/widgets.js"></script>
 </head>
 <body>
@@ -57,10 +58,11 @@ E\ket\psi_\L\ket0_{A_i} \;\longmapsto\;
 <h2>The stabilizer group</h2>
 <p>The stabilizers must be Pauli operators that fix every code state and commute with one another, so that they can be measured in any order:</p>
 \[
-\mathcal S = \bigl\{ P_i \in \mathcal G_n \;\big|\; P_i\ket\psi_\L = (+1)\ket\psi_\L\ \forall \ket\psi_\L,\ [P_i, P_j] = 0\ \forall i, j \bigr\},
-\qquad
-\mathcal S = \langle G_1, G_2, \ldots, G_m \rangle .
+\begin{aligned}
+\mathcal S &= \bigl\{ P_i \in \mathcal G_n \;\big|\; P_i\ket\psi_\L = (+1)\ket\psi_\L\ \forall \ket\psi_\L,\ [P_i, P_j] = 0\ \forall i, j \bigr\}, \\
+\mathcal S &= \langle G_1, G_2, \ldots, G_m \rangle .
 \qquad\text{(eq. 30, 31)}
+\end{aligned}
 \]
 <p>Products of stabilizers are stabilizers, so only a minimal generating set is measured: \(\langle Z_1Z_2, Z_2Z_3\rangle\) for the three-qubit code, not also \(Z_1Z_3 = (Z_1Z_2)(Z_2Z_3)\). Each independent generator halves the space, so \(m = n - k\) generators leave a \(2^k\)-dimensional codespace.</p>
 
@@ -73,16 +75,21 @@ E\ket\psi_\L\ket0_{A_i} \;\longmapsto\;
 <h2>The [[4,2,2]] detection code</h2>
 <p>The smallest code that notices both \(X\) and \(Z\) errors encodes two qubits in four, with codespace</p>
 \[
-\ket{00}_\L = \tfrac{1}{\sqrt2}(\ket{0000} + \ket{1111}),\quad
-\ket{01}_\L = \tfrac{1}{\sqrt2}(\ket{0110} + \ket{1001}),\quad
-\ket{10}_\L = \tfrac{1}{\sqrt2}(\ket{1010} + \ket{0101}),\quad
-\ket{11}_\L = \tfrac{1}{\sqrt2}(\ket{1100} + \ket{0011}),
+\begin{aligned}
+\ket{00}_\L &= \tfrac{1}{\sqrt2}(\ket{0000} + \ket{1111}), \\
+\ket{01}_\L &= \tfrac{1}{\sqrt2}(\ket{0110} + \ket{1001}), \\
+\ket{10}_\L &= \tfrac{1}{\sqrt2}(\ket{1010} + \ket{0101}), \\
+\ket{11}_\L &= \tfrac{1}{\sqrt2}(\ket{1100} + \ket{0011}),
 \qquad\text{(eq. 32)}
+\end{aligned}
 \]
 <p>and stabilizers \(\mathcal S = \langle X_1X_2X_3X_4,\ Z_1Z_2Z_3Z_4 \rangle\). Every single-qubit \(X\) anticommutes with \(Z_1Z_2Z_3Z_4\), every single-qubit \(Z\) with \(X_1X_2X_3X_4\), and \(Y\) with both, so every single-qubit error is detected (table 3). The syndrome depends only on the <em>kind</em> of error, not the qubit, so nothing can be located. A choice of logical operators is</p>
 \[
-\bar X_1 = X_1X_3,\quad \bar Z_1 = Z_1Z_4,\qquad \bar X_2 = X_2X_3,\quad \bar Z_2 = Z_2Z_4 ,
+\begin{aligned}
+\bar X_1 &= X_1X_3, &\quad \bar Z_1 &= Z_1Z_4, \\
+\bar X_2 &= X_2X_3, &\quad \bar Z_2 &= Z_2Z_4 ,
 \qquad\text{(eq. 33)}
+\end{aligned}
 \]
 <p>all of weight two, so \(d = 2\): a detection code. Two errors with the same syndrome differ by a logical operator, for example \(X_1X_2 = \bar X_1\bar X_2\) up to a stabilizer, which is exactly why undoing the wrong one would corrupt the data.</p>
 <aside class="note">
@@ -93,10 +100,12 @@ E\ket\psi_\L\ket0_{A_i} \;\longmapsto\;
 <h2>Encoding by projection</h2>
 <p>A codeword can be prepared without a bespoke circuit by projecting onto the \(+1\) eigenspace of every generator,</p>
 \[
-\ket0_\L = \frac1N \prod_{P_i \in \langle\mathcal S\rangle} (\I^{\otimes n} + P_i)\,\ket{0^{\otimes n}},
-\qquad
-\ket{00}_\L = \tfrac{1}{\sqrt2}(\I^{\otimes4} + X_1X_2X_3X_4)(\I^{\otimes4} + Z_1Z_2Z_3Z_4)\ket{0000} = \tfrac{1}{\sqrt2}(\ket{0000} + \ket{1111}),
+\begin{aligned}
+\ket0_\L &= \frac1N \prod_{P_i \in \langle\mathcal S\rangle} (\I^{\otimes n} + P_i)\,\ket{0^{\otimes n}}, \\
+\ket{00}_\L &= \tfrac{1}{\sqrt2}(\I^{\otimes4} + X_1X_2X_3X_4)(\I^{\otimes4} + Z_1Z_2Z_3Z_4)\ket{0000} \\
+&= \tfrac{1}{\sqrt2}(\ket{0000} + \ket{1111}),
 \qquad\text{(eq. 34, 35)}
+\end{aligned}
 \]
 <p>and the other codewords follow by applying logical \(\bar X\) operators. In hardware the projection is the syndrome-extraction circuit run on \(\ket{0^{\otimes n}}\); each ancilla then reads 0 or 1 with equal probability, as eq. 36 shows for \(X_1X_2X_3X_4\), and a 1 is fixed by an operator that anticommutes with that stabilizer only.</p>
 <p>Eq. 34 fixes the codespace but not, in general, the logical value; for the \([[4,2,2]]\) code the two coincide. <a href="03-shor-code.html">Part 3</a> shows a code where they do not.</p>

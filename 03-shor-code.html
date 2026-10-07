@@ -23,11 +23,12 @@ window.MathJax = {
       span: '\\operatorname{span}'
     }
   },
+  output: { displayOverflow: 'linebreak' },
   svg: { fontCache: 'global' },
   options: { ignoreHtmlClass: 'qec-widget', skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
 };
 </script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-svg.js"></script>
 <script type="module" src="assets/widgets.js"></script>
 </head>
 <body>
@@ -62,12 +63,15 @@ RE\ket\psi_\L = \bar L\ket\psi_\L
 <h2>The Shor [[9,1,3]] code</h2>
 <p>Shor's code concatenates two three-qubit codes: the bit-flip code \(\mathcal C_{3b} = \span\{\ket{000}, \ket{111}\}\) with \(\mathcal S_{3b} = \langle Z_1Z_2, Z_2Z_3\rangle\), and the phase-flip code \(\mathcal C_{3p} = \span\{\ket{+++}, \ket{---}\}\) with \(\mathcal S_{3p} = \langle X_1X_2, X_2X_3\rangle\) (eq. 39, 40). Each qubit of the phase-flip code is itself a bit-flip code, \(\ket\pm \mapsto \ket\pm_{3b} = (\ket{000} \pm \ket{111})/\sqrt2\) (eq. 41, 42), giving</p>
 \[
-\ket0_9 = \tfrac{1}{\sqrt8}\,(\ket{000} + \ket{111})^{\otimes3},\qquad
-\ket1_9 = \tfrac{1}{\sqrt8}\,(\ket{000} - \ket{111})^{\otimes3},
+\begin{aligned}
+\ket0_9 &= \tfrac{1}{\sqrt8}\,(\ket{000} + \ket{111})^{\otimes3}, \\
+\ket1_9 &= \tfrac{1}{\sqrt8}\,(\ket{000} - \ket{111})^{\otimes3},
 \qquad\text{(eq. 43)}
+\end{aligned}
 \]
 \[
-\mathcal S_{[[9,1,3]]} = \langle Z_1Z_2,\, Z_2Z_3,\, Z_4Z_5,\, Z_5Z_6,\, Z_7Z_8,\, Z_8Z_9,\, X_1X_2X_3X_4X_5X_6,\, X_4X_5X_6X_7X_8X_9 \rangle .
+\mathcal S_{[[9,1,3]]} \nobreak= \langle Z_1Z_2,\, Z_2Z_3,\, Z_4Z_5,\, Z_5Z_6,\, Z_7Z_8,\, Z_8Z_9,\goodbreak\,
+X_1X_2X_3X_4X_5X_6,\, X_4X_5X_6X_7X_8X_9 \rangle\nobreak .
 \qquad\text{(eq. 44)}
 \]
 <p>The six \(Z\)-type generators locate a bit flip within its block; the two \(X\)-type ones compare the signs of neighbouring blocks and so locate a phase flip to a block. Every single-qubit \(X\) error has its own syndrome, but \(Z_1, Z_2, Z_3\) share one (table 4). That costs nothing: if the decoder answers \(Z_1\) to an actual \(Z_2\), then \(RE = Z_1Z_2 \in \mathcal S\) and eq. 37 holds. The code corrects every single-qubit error and has \(d = 3\). The paper does not list logical operators; with eq. 43 they are \(\bar X = Z_1Z_4Z_7\), which flips the sign of every block, and \(\bar Z = X_1X_2X_3\), which reads the sign of one block.</p>

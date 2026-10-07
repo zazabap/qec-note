@@ -23,11 +23,12 @@ window.MathJax = {
       span: '\\operatorname{span}'
     }
   },
+  output: { displayOverflow: 'linebreak' },
   svg: { fontCache: 'global' },
   options: { ignoreHtmlClass: 'qec-widget', skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
 };
 </script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-svg.js"></script>
 <script type="module" src="assets/widgets.js"></script>
 </head>
 <body>
@@ -46,7 +47,10 @@ window.MathJax = {
 <h2>Classical linear codes</h2>
 <p>A classical binary linear code \(C\) with parameters \([n, k, d]\) is a \(k\)-dimensional subspace of \(\mathbb F_2^n\) whose nonzero words all have weight at least \(d\). It is the kernel of a parity-check matrix \(H\), an \(m \times n\) binary matrix,</p>
 \[
-C = \ker H = \{ c \in \mathbb F_2^n : Hc = 0 \}, \qquad k = n - \operatorname{rank} H ,
+\begin{aligned}
+C &= \ker H = \{ c \in \mathbb F_2^n : Hc = 0 \}, \\
+k &= n - \operatorname{rank} H ,
+\end{aligned}
 \]
 <p>and a bit-flip pattern \(e\) is revealed by its syndrome \(s = He\), which depends only on \(e\), not on the codeword it hit. The dual code \(C^\perp\) is spanned by the rows of \(H\). The Hamming code \([7,4,3]\) has</p>
 \[
@@ -61,12 +65,18 @@ H_X H_Z^{\mathsf T} = 0 .
 \]
 <p>An error \(E = X^{e_X} Z^{e_Z}\) (a \(Y\) counts in both) gives two separate syndromes, and the code has</p>
 \[
-s_X = H_X\, e_Z, \qquad s_Z = H_Z\, e_X, \qquad k = n - \operatorname{rank} H_X - \operatorname{rank} H_Z .
+\begin{aligned}
+s_X &= H_X\, e_Z, \\
+s_Z &= H_Z\, e_X, \\
+k &= n - \operatorname{rank} H_X - \operatorname{rank} H_Z .
+\end{aligned}
 \]
 <p>A logical \(\bar X\) is an \(X^{v}\) that commutes with every \(Z\) check, \(v \in \ker H_Z\), without being a product of \(X\) checks, \(v \notin \operatorname{row} H_X\); a logical \(\bar Z\) is the same with the roles swapped. Hence \(d = \min(d_X, d_Z)\) with</p>
 \[
-d_X = \min\{ |v| : v \in \ker H_Z \setminus \operatorname{row} H_X \}, \qquad
-d_Z = \min\{ |v| : v \in \ker H_X \setminus \operatorname{row} H_Z \} .
+\begin{aligned}
+d_X &= \min\{ |v| : v \in \ker H_Z \setminus \operatorname{row} H_X \}, \\
+d_Z &= \min\{ |v| : v \in \ker H_X \setminus \operatorname{row} H_Z \} .
+\end{aligned}
 \]
 <p>In the original formulation one chooses classical codes \(C_2 \subset C_1\) and sets \(H_Z = H(C_1)\) and \(\operatorname{row} H_X = C_2\), so that the commutation condition is exactly \(C_2 \subseteq C_1\). The codewords are uniform superpositions over cosets of \(C_2\) inside \(C_1\),</p>
 \[
@@ -80,8 +90,11 @@ d_Z = \min\{ |v| : v \in \ker H_X \setminus \operatorname{row} H_Z \} .
 <h2>The Steane code</h2>
 <p>Choosing \(C_1\) the Hamming code and \(C_2 = C_1^\perp\) the simplex code gives \(H_X = H_Z = H_{\text{Ham}}\), and the \([[7,1,3]]\) Steane code:</p>
 \[
-\ket0_\L = \tfrac{1}{\sqrt8} \sum_{y \in C_{\text{simplex}}} \ket{y}, \qquad
-\ket1_\L = \bar X \ket0_\L, \qquad \bar X = X^{\otimes 7}, \quad \bar Z = Z^{\otimes 7} .
+\begin{aligned}
+\ket0_\L &= \tfrac{1}{\sqrt8} \sum_{y \in C_{\text{simplex}}} \ket{y}, \\
+\ket1_\L &= \bar X \ket0_\L, \\
+\bar X &= X^{\otimes 7}, \quad \bar Z = Z^{\otimes 7} .
+\end{aligned}
 \]
 <p>\(\ket0_\L\) is the sum over the eight simplex codewords, the all-zero word and the seven words of weight four. \(X^{\otimes7}\) has weight seven, but multiplying by a weight-four stabilizer leaves a weight-three representative, which is the distance. Every single-qubit error is corrected, and the decoder is the Hamming decoder twice: an \(X\) error on qubit \(j\) gives \(s_Z = j\) in binary, a \(Z\) error gives \(s_X = j\), and a \(Y\) gives both. Because \(H_X = H_Z\), swapping \(X\) and \(Z\) maps the code to itself, which is why a transversal Hadamard, \(H\) on every qubit, implements a logical Hadamard. CSS codes in general also have a transversal logical CNOT between two blocks.</p>
 

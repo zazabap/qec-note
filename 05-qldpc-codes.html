@@ -23,11 +23,12 @@ window.MathJax = {
       span: '\\operatorname{span}'
     }
   },
+  output: { displayOverflow: 'linebreak' },
   svg: { fontCache: 'global' },
   options: { ignoreHtmlClass: 'qec-widget', skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
 };
 </script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-svg.js"></script>
 <script type="module" src="assets/widgets.js"></script>
 </head>
 <body>
@@ -53,14 +54,18 @@ window.MathJax = {
 <h2>The hypergraph product</h2>
 <p>Given two classical codes with parity-check matrices \(H_1\) (\(m_1 \times n_1\)) and \(H_2\) (\(m_2 \times n_2\)), Tillich and Zémor define</p>
 \[
-H_X = \bigl(\, H_1 \otimes I_{n_2} \;\big|\; I_{m_1} \otimes H_2^{\mathsf T} \,\bigr), \qquad
-H_Z = \bigl(\, I_{n_1} \otimes H_2 \;\big|\; H_1^{\mathsf T} \otimes I_{m_2} \,\bigr).
+\begin{aligned}
+H_X &= \bigl(\, H_1 \otimes I_{n_2} \;\big|\; I_{m_1} \otimes H_2^{\mathsf T} \,\bigr), \\
+H_Z &= \bigl(\, I_{n_1} \otimes H_2 \;\big|\; H_1^{\mathsf T} \otimes I_{m_2} \,\bigr).
+\end{aligned}
 \]
 <p>Then \(H_X H_Z^{\mathsf T} = H_1 \otimes H_2^{\mathsf T} + H_1 \otimes H_2^{\mathsf T} = 0\) over \(\mathbb F_2\), whatever \(H_1\) and \(H_2\) are. The qubits come in two blocks, one for each pair (bit of code 1, bit of code 2) and one for each pair (check of code 1, check of code 2), and the parameters are</p>
 \[
-n = n_1 n_2 + m_1 m_2, \qquad
-k = k_1 k_2 + k_1^{\mathsf T} k_2^{\mathsf T}, \qquad
-d = \min\bigl(d_1, d_2, d_1^{\mathsf T}, d_2^{\mathsf T}\bigr),
+\begin{aligned}
+n &= n_1 n_2 + m_1 m_2, \\
+k &= k_1 k_2 + k_1^{\mathsf T} k_2^{\mathsf T}, \\
+d &= \min\bigl(d_1, d_2, d_1^{\mathsf T}, d_2^{\mathsf T}\bigr),
+\end{aligned}
 \]
 <p>where \(k_i^{\mathsf T}\) and \(d_i^{\mathsf T}\) belong to the transposed code \(\ker H_i^{\mathsf T}\) (a distance counts as \(\infty\) when that code is empty). An X check has weight equal to a row weight of \(H_1\) plus a column weight of \(H_2\), so sparse inputs give a sparse output. The product of two repetition codes is exactly the planar surface code, and the product of two cyclic repetition codes is Kitaev's toric code. Feeding in classical LDPC codes with \(k, d \propto n\) gives \(k \propto N\) and \(d \propto \sqrt N\) in the number of qubits \(N\): constant rate, at the surface code's distance scaling.</p>
 
