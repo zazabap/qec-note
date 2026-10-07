@@ -49,7 +49,6 @@ table.tbl th { font-weight: 600; }
 .mono { font-family: var(--mono); font-size: 0.95em; }
 figure { margin: 1.5rem 0; }
 figcaption { font-family: var(--sans); font-size: 0.85rem; color: var(--muted); }
-mjx-container { overflow-x: auto; overflow-y: hidden; }
 mjx-container[display="true"] { margin: 0.9em 0 !important; }
 .contents { list-style: none; padding-left: 0; }
 .contents li { margin: 0.5rem 0; }
@@ -67,7 +66,7 @@ footer { margin-top: 3.5rem; padding-top: 1rem; border-top: 1px solid var(--rule
 .w-meta { color: var(--muted); font-size: 0.85rem; margin: 0.25rem 0 0.6rem; }
 .w-note { color: var(--muted); font-size: 0.85rem; margin: 0.5rem 0 0; }
 .w-row { display: flex; flex-wrap: wrap; gap: 1rem 2rem; align-items: flex-start; margin: 0.6rem 0 0.2rem; }
-.scroll { overflow-x: auto; }
+.fit { max-width: 100%; }
 
 /* qubits */
 .qubits { display: flex; flex-wrap: wrap; gap: 0.7rem; }
@@ -182,8 +181,8 @@ summary { cursor: pointer; color: var(--muted); }
 .panel-head { margin: 0 0 0.3rem; }
 
 /* parity-check matrices */
-.pick { display: inline-flex; align-items: center; gap: 0.4rem; }
-.pick select { font: inherit; padding: 0.15rem 0.3rem; border: 1px solid var(--ink); border-radius: 3px; background: var(--paper); color: var(--ink); max-width: 100%; }
+.pick { display: inline-flex; align-items: center; gap: 0.4rem; max-width: 100%; min-width: 0; }
+.pick select { font: inherit; padding: 0.15rem 0.3rem; border: 1px solid var(--ink); border-radius: 3px; background: var(--paper); color: var(--ink); max-width: 100%; min-width: 0; flex: 0 1 auto; }
 .pcm-pair { display: flex; flex-wrap: wrap; gap: 0.6rem 1.6rem; align-items: flex-start; margin: 0.6rem 0; }
 .pcm { border-collapse: collapse; font-family: var(--mono); font-size: 0.82rem; }
 .pcm caption { font-family: var(--sans); font-size: 0.8rem; color: var(--muted); text-align: left; padding-bottom: 0.25rem; caption-side: top; }
@@ -220,7 +219,6 @@ summary { cursor: pointer; color: var(--muted); }
 .hg-op { font-size: 11px; font-weight: 700; fill: #fff; pointer-events: none; }
 .hg-belief-x { fill: none; stroke: var(--x); stroke-width: 3; }
 .hg-belief-z { fill: none; stroke: var(--z); stroke-width: 3; }
-.hg-params td, .hg-params th { white-space: nowrap; }
 
 /* references */
 ol.refs { padding-left: 1.4rem; font-size: 0.95em; }
@@ -252,7 +250,7 @@ ol.refs .why { display: block; color: var(--muted); font-size: 0.93em; }
 .chart .dot { stroke: var(--paper); stroke-width: 2; }
 .chart .dot-ref { fill: var(--ink); }
 .chart .dot-enc { fill: var(--x); }
-.tip { position: absolute; top: 8px; pointer-events: none; background: var(--paper); border: 1px solid var(--rule); border-radius: 3px; padding: 0.3rem 0.6rem; font-size: 0.82rem; line-height: 1.5; white-space: nowrap; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+.tip { position: absolute; top: 8px; pointer-events: none; background: var(--paper); border: 1px solid var(--rule); border-radius: 3px; padding: 0.3rem 0.6rem; font-size: 0.82rem; line-height: 1.5; width: max-content; max-width: min(15rem, 55vw); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
 .tip-x { font-weight: 600; }
 .tip b { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .readout-line { margin: 0.5rem 0; }
@@ -279,6 +277,15 @@ ol.refs .why { display: block; color: var(--muted); font-size: 0.93em; }
 .w-table { border-collapse: collapse; font-size: 0.88rem; margin: 0.4rem 0; }
 .w-table th, .w-table td { padding: 0.25rem 0.6rem; text-align: left; border-bottom: 1px solid var(--rule); vertical-align: top; }
 .w-table th { font-weight: 600; }
+.w-table .mono { white-space: nowrap; }
+.w-table.hg-params .mono { white-space: normal; }
+.w-table th.stab-col { writing-mode: vertical-rl; transform: rotate(180deg); text-align: left; vertical-align: bottom; padding: 0.4rem 0.2rem; overflow-wrap: normal; }
+@media (max-width: 40rem) {
+  .w-table th, .w-table td, table.tbl th, table.tbl td { padding: 0.2rem 0.25rem; }
+  .w-table .stab-col { display: none; }
+  .w-table th.stab { writing-mode: vertical-rl; transform: rotate(180deg); text-align: left; vertical-align: bottom; padding: 0.3rem 0.1rem; }
+  .w-table, table.tbl { font-size: 0.8rem; }
+}
 .w-table td.lit { background: var(--x-tint); font-weight: 600; }
 .w-table tr.lit td { background: var(--tint); }
 .w-table tr.is-logical td { color: var(--bad); }

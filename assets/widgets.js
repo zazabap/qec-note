@@ -575,9 +575,9 @@ class QecCircuit extends Base {
       }
     });
 
-    const out = svg('svg', { viewBox: `0 0 ${W} ${H}`, class: 'circuit', style: W > 720 ? { width: `${W}px`, maxWidth: 'none' } : { maxWidth: `${W * 1.15}px` }, role: 'img',
+    const out = svg('svg', { viewBox: `0 0 ${W} ${H}`, class: 'circuit', style: { maxWidth: `${W * 1.15}px` }, role: 'img',
       'aria-label': `Circuit of the ${this.code.name}: encoder, error stage, and syndrome extraction with ${m} ancilla${m > 1 ? 's' : ''}. Current stage: ${stage.name}.` }, els);
-    return W > 720 ? h('div', { class: 'scroll' }, out) : out;
+    return out;
   }
 
   caption(state, correction) {
@@ -840,7 +840,7 @@ class QecSuppression extends Base {
     this.replaceChildren(
       header(this, title, 'Move the slider, or hover the plot.'),
       slider('p =', { id: `${this.id}-p`, min: 0, max: 0.5, step: 0.005, value: this.p, live: true, format: (v) => v.toFixed(3), oninput: (v) => { this.p = v; this.update(); } }),
-      h('div', { class: 'scroll' }, h('table', { class: 'w-table terms' },
+      h('div', { class: 'fit' }, h('table', { class: 'w-table terms' },
         h('thead', {}, h('tr', {}, h('th', {}, `term of ${factors}${this.correct ? '' : ' (eq. 21)'}`), h('th', {}, 'coefficient'), h('th', {}, 'value'), h('th', {}, 'syndrome'), h('th', {}, 'effect on |ψ⟩ᴸ'))),
         this.terms)),
       this.readout,
@@ -934,10 +934,12 @@ class QecSyndromeTable extends Base {
       return `same syndrome as ${single.get(r.syndrome)}; decoder applies ${corr.toLabelled(code.labels)}, leaving ${rc.action.join(' ')}`;
     };
 
+    // With many stabilizers the ±1 columns are hidden on narrow screens; the syndrome column has the same bits.
+    const many = code.stabilizers.length > 4;
     this.replaceChildren(
       header(this, `${code.name}: syndromes of every ${ks.join('/')} error pattern`),
-      h('div', { class: 'scroll' }, h('table', { class: 'w-table' },
-        h('thead', {}, h('tr', {}, h('th', {}, 'error'), h('th', {}, 'weight'), code.stabilizers.map((s) => h('th', { class: 'mono' }, s.toLabelled(code.labels))), h('th', {}, 'syndrome S'), h('th', {}, 'what happens'))),
+      h('div', { class: 'fit' }, h('table', { class: 'w-table' },
+        h('thead', {}, h('tr', {}, h('th', {}, 'error'), h('th', {}, 'weight'), code.stabilizers.map((s) => h('th', { class: many ? 'mono stab stab-col' : 'mono stab' }, s.toLabelled(code.labels))), h('th', {}, 'syndrome S'), h('th', {}, 'what happens'))),
         h('tbody', {}, rows.map((r) => h('tr', {
           class: code.classify(r.error).kind === 'logical' ? 'is-logical' : '',
           'data-error': r.error.toString(),
@@ -948,7 +950,7 @@ class QecSyndromeTable extends Base {
           onkeydown: this.fig ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); assignPauli(this.fig.err, r.error); this.fig.broadcast(); } } : undefined,
         },
           h('td', { class: 'mono' }, r.label), h('td', { class: 'mono' }, r.weight),
-          Array.from(r.syndrome).map((b) => h('td', { class: `mono${b === '1' ? ' lit' : ''}` }, b === '1' ? '−1' : '+1')),
+          Array.from(r.syndrome).map((b) => h('td', { class: `mono${b === '1' ? ' lit' : ''}${many ? ' stab-col' : ''}` }, b === '1' ? '−1' : '+1')),
           h('td', { class: 'mono' }, r.syndrome), h('td', {}, verdict(r))))))),
       h('p', { class: 'w-note' }, shareNote,
         this.fig ? ' Click a row to apply that error in the other parts.' : ''));
@@ -1244,7 +1246,7 @@ class QecProjection extends Base {
       h('p', { class: 'stage-caption' }, h('b', {}, `${stages[this.stage].name}. `), this.caption(this.stage, s, lastNorm)),
       this.checks(s),
       h('p', { class: 'w-note' }, `Non-zero terms of the state in the computational basis (${cols.length} of ${s.dim}):`),
-      h('div', { class: 'scroll' }, barChart(cols, [], { colW, height: 112, title: `State after ${stages[this.stage].name}: ${s.toString(3)}` })),
+      h('div', { class: 'fit' }, barChart(cols, [], { colW, height: 112, title: `State after ${stages[this.stage].name}: ${s.toString(3)}` })),
       h('div', { class: 'controls stack' },
         h('div', { class: 'errpick', role: 'group', 'aria-label': 'target codeword' },
           h('span', { class: 'errpick-name' }, 'Target:'),
@@ -1275,7 +1277,7 @@ function cssMatrices(code) {
 /** A small 0/1 matrix as a table; `hitCols` marks columns carrying an error, `lit` the rows with syndrome 1. */
 function matrixTable(A, { kind, colLabels, rowLabels, hitCols = [], lit = [], syndrome = null, caption }) {
   const n = A.length ? A[0].length : colLabels.length;
-  return h('div', { class: 'scroll' }, h('table', { class: `pcm pcm-${kind}` },
+  return h('div', { class: 'fit' }, h('table', { class: `pcm pcm-${kind}` },
     caption ? h('caption', {}, caption) : null,
     h('thead', {}, h('tr', {}, h('th', {}, ''), colLabels.map((l, j) => h('th', { class: hitCols.includes(j) ? 'hit' : '' }, l)), syndrome ? h('th', { class: 'syn' }, 's') : null)),
     h('tbody', {}, A.map((row, i) => h('tr', { class: lit[i] ? 'lit' : '' },
@@ -1438,7 +1440,7 @@ class QecCssBuilder extends Base {
       h('div', { class: 'pcm-pair' },
         matrixTable(HX, { kind: 'x', colLabels, rowLabels: HX.map((_, i) => `X${subscript(i + 1)}`), caption: `H_X, ${HX.length} × ${n}` }),
         matrixTable(HZ, { kind: 'z', colLabels, rowLabels: HZ.map((_, i) => `Z${subscript(i + 1)}`), caption: `H_Z, ${HZ.length} × ${n}` }),
-        h('div', { class: 'scroll' }, h('table', { class: 'pcm pcm-prod' },
+        h('div', { class: 'fit' }, h('table', { class: 'pcm pcm-prod' },
           h('caption', {}, 'H_X·H_Zᵀ (must be all zero)'),
           h('thead', {}, h('tr', {}, h('th', {}, ''), HZ.map((_, j) => h('th', {}, `Z${subscript(j + 1)}`)))),
           h('tbody', {}, P.map((row, i) => h('tr', {}, h('th', {}, `X${subscript(i + 1)}`), Array.from(row).map((b) => h('td', { class: b ? 'bad' : '' }, b ? '1' : '0')))))))),
@@ -1601,12 +1603,12 @@ class QecHgp extends Base {
       h('div', { class: 'controls' }, ['k1', 'k2'].map((w, idx) => h('label', { class: 'pick', for: `${this.id}-${w}` }, idx ? 'code 2: ' : 'code 1: ',
         h('select', { id: `${this.id}-${w}`, onchange: (e) => { this[w] = e.target.value; this.setCodes(); } },
           this.keys.map((k) => h('option', { value: k, selected: k === this[w] }, classical(k).name)))))),
-      h('div', { class: 'scroll' }, h('table', { class: 'w-table hg-params' },
+      h('div', { class: 'fit' }, h('table', { class: 'w-table hg-params' },
         h('thead', {}, h('tr', {}, h('th', {}, ''), h('th', {}, 'n'), h('th', {}, 'k'), h('th', {}, 'd'), h('th', {}, 'm (checks)'), h('th', {}, 'kᵀ'), h('th', {}, 'dᵀ'))),
         h('tbody', {},
           [c1, c2].map((c, i) => h('tr', {}, h('td', {}, `code ${i + 1}: ${c.short}`), h('td', { class: 'mono' }, c.n), h('td', { class: 'mono' }, c.k), h('td', { class: 'mono' }, fmtD(c.d)), h('td', { class: 'mono' }, c.m), h('td', { class: 'mono' }, c.kT), h('td', { class: 'mono' }, fmtD(c.dT)))),
           h('tr', { class: 'lit' }, h('td', {}, 'product'), h('td', { class: 'mono' }, `${c1.n}·${c2.n} + ${c1.m}·${c2.m} = ${code.n}`), h('td', { class: 'mono' }, `${c1.k}·${c2.k} + ${c1.kT}·${c2.kT} = ${code.k}`),
-            h('td', { class: 'mono' }, code.knownDistance ?? '—'), h('td', { class: 'mono' }, `${HX.length} X + ${HZ.length} Z`), h('td', {}, ''), h('td', {}, ''))))),
+            h('td', { class: 'mono' }, code.knownDistance ?? '—'), h('td', { class: 'mono' }, `${HX.length}\u00a0X + ${HZ.length}\u00a0Z`), h('td', {}, ''), h('td', {}, ''))))),
       h('p', { class: 'w-meta' }, `Largest check weight ${Math.max(rowW(HX), rowW(HZ))}, largest number of checks on one qubit ${Math.max(...colW)}.`),
       lat,
       h('p', { class: 'w-note' }, 'Circles are qubits; orange squares are X-type checks (they detect Z errors), blue squares Z-type checks (they detect X errors). A square turns solid when its check is violated, and lines join it to its qubits.',
