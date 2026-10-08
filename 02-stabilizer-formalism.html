@@ -258,7 +258,7 @@ X_1X_2X_3X_4X_5X_6,\, X_4X_5X_6X_7X_8X_9 \rangle\nobreak .
 <h2 id="problems">Problems</h2>
 <p>Each solution is hidden until you open it. Numbers can be checked against the figures above.</p>
 <ol class="problems">
-<li><p><strong>When do Pauli strings commute?.</strong> (a) Show that two \(n\)-qubit Pauli strings commute if and only if the number of positions where both are non-identity and different is even. (b) Does \(X_1Z_2X_3\) commute with \(Z_1Z_2Z_3Z_4\)? With \(X_1X_2X_3X_4\)?</p>
+<li><p><strong>When do Pauli strings commute?</strong> (a) Show that two \(n\)-qubit Pauli strings commute if and only if the number of positions where both are non-identity and different is even. (b) Does \(X_1Z_2X_3\) commute with \(Z_1Z_2Z_3Z_4\)? With \(X_1X_2X_3X_4\)?</p>
 <details class="solution"><summary>Solution</summary>
 <p>(a) On one qubit, two Paulis commute when one is \(\I\) or they are equal, and anticommute otherwise. Moving \(Q\) past \(P\) position by position picks up a factor \(-1\) for each anticommuting position, so \(PQ = (-1)^{a} QP\) with \(a\) the number of such positions.</p>
 <p>(b) Against \(Z_1Z_2Z_3Z_4\), qubits 1 and 3 differ (\(X\) against \(Z\)) and qubit 2 agrees: two positions, so they commute. Against \(X_1X_2X_3X_4\), only qubit 2 differs: they anticommute, and that stabilizer would read \(-1\).</p>
