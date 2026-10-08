@@ -309,3 +309,16 @@ ol.refs .why { display: block; color: var(--muted); font-size: 0.93em; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* ---------------------------------------------------------- problems */
+
+ol.problems { padding-left: 1.6rem; }
+ol.problems > li { margin: 1.1rem 0 1.5rem; padding-left: 0.2rem; }
+ol.problems > li::marker { font-family: var(--sans); font-weight: 700; }
+ol.problems > li > p:first-child { margin-top: 0; }
+details.solution { margin: 0.4rem 0 0; border-left: 3px solid var(--rule); padding: 0.1rem 0 0.1rem 0.8rem; }
+details.solution > summary { cursor: pointer; width: max-content; font-family: var(--sans); font-size: 0.85rem; color: var(--muted); }
+details.solution > summary:hover { color: var(--ink); }
+details.solution[open] { border-left-color: var(--ink); }
+details.solution[open] > summary { margin-bottom: 0.3rem; color: var(--ink); }
+details.solution > p { margin: 0.4rem 0; }

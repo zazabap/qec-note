@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>The Stabilizer Formalism</title>
 <meta name="description" content="Roffe's section 4: stabilizer measurement, the stabilizer group, logical operators and encoding by projection, worked through two examples, the [[4,2,2]] detection code and Shor's [[9,1,3]] code with recovery and degeneracy, with the amplitudes drawn in the code's own basis. Part 2 of a set of notes on quantum error correction.">
-<link rel="stylesheet" href="assets/qec.css?v=20261007c">
+<link rel="stylesheet" href="assets/qec.css?v=20261007d">
 <script>
 window.MathJax = {
   tex: {
@@ -29,7 +29,7 @@ window.MathJax = {
 };
 </script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-svg.js"></script>
-<script type="module" src="assets/widgets.js?v=20261007c"></script>
+<script type="module" src="assets/widgets.js?v=20261007d"></script>
 </head>
 <body>
 <div class="wrap">
@@ -42,7 +42,7 @@ window.MathJax = {
 <main>
 <p class="crumbs">Notes on quantum error correction · Part 2 · follows Roffe, section 4 · previous: <a href="01-quantum-redundancy.html">Part 1</a> · next: <a href="03-css-codes.html">Part 3</a></p>
 <h1>The stabilizer formalism</h1>
-<p class="lead">Part 1 built codes one stabilizer at a time. Section 4 turns the recipe into a framework: a code is a commuting set of Pauli operators, its logical qubits are what those operators leave free, and the syndrome is a list of commutation signs. This part sets out the framework and works through two examples: the \([[4,2,2]]\) code, which detects errors, and Shor's \([[9,1,3]]\) code, which corrects them. The <a href="#figures">figures</a> are at the end.</p>
+<p class="lead">Part 1 built codes one stabilizer at a time. Section 4 turns the recipe into a framework: a code is a commuting set of Pauli operators, its logical qubits are what those operators leave free, and the syndrome is a list of commutation signs. This part sets out the framework and works through two examples: the \([[4,2,2]]\) code, which detects errors, and Shor's \([[9,1,3]]\) code, which corrects them. The <a href="#figures">figures</a> are at the end, followed by <a href="#problems">problems</a>.</p>
 
 <p class="eyebrow">Roffe §4</p>
 <h2>The [[n, k, d]] stabilizer code</h2>
@@ -255,6 +255,55 @@ X_1X_2X_3X_4X_5X_6,\, X_4X_5X_6X_7X_8X_9 \rangle\nobreak .
 </qec-figure>
 </section>
 </qec-tabs>
+<h2 id="problems">Problems</h2>
+<p>Each solution is hidden until you open it. Numbers can be checked against the figures above.</p>
+<ol class="problems">
+<li><p><strong>When do Pauli strings commute?.</strong> (a) Show that two \(n\)-qubit Pauli strings commute if and only if the number of positions where both are non-identity and different is even. (b) Does \(X_1Z_2X_3\) commute with \(Z_1Z_2Z_3Z_4\)? With \(X_1X_2X_3X_4\)?</p>
+<details class="solution"><summary>Solution</summary>
+<p>(a) On one qubit, two Paulis commute when one is \(\I\) or they are equal, and anticommute otherwise. Moving \(Q\) past \(P\) position by position picks up a factor \(-1\) for each anticommuting position, so \(PQ = (-1)^{a} QP\) with \(a\) the number of such positions.</p>
+<p>(b) Against \(Z_1Z_2Z_3Z_4\), qubits 1 and 3 differ (\(X\) against \(Z\)) and qubit 2 agrees: two positions, so they commute. Against \(X_1X_2X_3X_4\), only qubit 2 differs: they anticommute, and that stabilizer would read \(-1\).</p>
+</details></li>
+<li><p><strong>The [[4,2,2]] stabilizer group.</strong> (a) List every element of \(\mathcal S = \langle X_1X_2X_3X_4, Z_1Z_2Z_3Z_4\rangle\), with signs. (b) The projector onto the codespace is \(P = \prod_i (\I + G_i)/2\). Use \(\operatorname{tr} P\) to show the codespace has dimension \(4 = 2^k\). (c) Why can \(-\I\) never belong to a stabilizer group?</p>
+<details class="solution"><summary>Solution</summary>
+<p>(a) \(X_1X_2X_3X_4 \cdot Z_1Z_2Z_3Z_4 = \bigotimes_j X_jZ_j = (-i)^4\, Y_1Y_2Y_3Y_4 = Y_1Y_2Y_3Y_4\), so \(\mathcal S\) has four elements, all with sign \(+\): \(\I\), \(X_1X_2X_3X_4\), \(Z_1Z_2Z_3Z_4\) and \(Y_1Y_2Y_3Y_4\).</p>
+<p>(b) \(P = \tfrac14(\I + X^{\otimes4} + Z^{\otimes4} + Y^{\otimes4})\). Every non-identity Pauli string is traceless, so \(\operatorname{tr} P = 16/4 = 4\). In general \(\operatorname{tr} P = 2^n/2^m = 2^{n-m}\), which is why \(k = n - m\).</p>
+<p>(c) A code state would satisfy \(-\ket\psi = \ket\psi\), so the codespace would be empty.</p>
+</details></li>
+<li><p><strong>Reading the logical operators.</strong> (a) Check that the operators of eq. 33 commute with both stabilizers, and that \(\bar X_1\) anticommutes with \(\bar Z_1\) but commutes with \(\bar Z_2\) (and likewise for qubit 2). (b) Write \(X_1X_2\), \(Z_1Z_2\) and \(Y_1Y_2\) as products of logical operators. Compare the weight-2 rows of figure B.2.</p>
+<details class="solution"><summary>Solution</summary>
+<p>(a) Each of \(X_1X_3, X_2X_3\) meets \(Z_1Z_2Z_3Z_4\) on two qubits, and each of \(Z_1Z_4, Z_2Z_4\) meets \(X_1X_2X_3X_4\) on two, so all commute with \(\mathcal S\). \(\bar X_1 = X_1X_3\) and \(\bar Z_1 = Z_1Z_4\) share only qubit 1: they anticommute. \(\bar X_1\) and \(\bar Z_2 = Z_2Z_4\) share nothing: they commute. \(\bar X_2 = X_2X_3\) shares qubit 2 with \(\bar Z_2\) and nothing with \(\bar Z_1\).</p>
+<p>(b) \(\bar X_1\bar X_2 = X_1X_3X_2X_3 = X_1X_2\) and \(\bar Z_1\bar Z_2 = Z_1Z_4Z_2Z_4 = Z_1Z_2\). Then \(Y_1Y_2 \propto X_1X_2Z_1Z_2 = \bar X_1\bar X_2\bar Z_1\bar Z_2 \propto \bar Y_1\bar Y_2\). Each has weight two, gives syndrome 00 and changes both logical qubits, as figure B.2 reports.</p>
+</details></li>
+<li><p><strong>The quantum Singleton bound.</strong> Every \([[n,k,d]]\) code satisfies \(n - k \ge 2(d-1)\). (a) Check it for the \([[4,2,2]]\) and Shor \([[9,1,3]]\) codes. (b) Could a \([[4,2,3]]\) code exist? (c) What is the smallest \(n\) the bound allows for \(k = 1\), \(d = 3\)?</p>
+<details class="solution"><summary>Solution</summary>
+<p>(a) \([[4,2,2]]\): \(2 \ge 2\), with equality. Shor: \(8 \ge 4\), with room to spare.</p>
+<p>(b) No: it would need \(2 \ge 4\).</p>
+<p>(c) \(n - 1 \ge 4\), so \(n \ge 5\). The five-qubit \([[5,1,3]]\) code exists and meets the bound; the Steane code of part 3 uses 7 qubits and the Shor code 9.</p>
+</details></li>
+<li><p><strong>Encoding from the wrong start.</strong> Prepare the \([[4,2,2]]\) code by measuring the stabilizers, starting from \(\ket{0001}\). (a) What does \(Z_1Z_2Z_3Z_4\) read? Find a single-qubit Pauli that fixes it without disturbing the \(X_1X_2X_3X_4\) measurement to come. (b) Then measure \(X_1X_2X_3X_4\). Which code state do you get for each outcome? Compare eq. 32.</p>
+<details class="solution"><summary>Solution</summary>
+<p>(a) \(\ket{0001}\) has odd parity, so \(Z_1Z_2Z_3Z_4\) reads \(-1\) with certainty. The fix must anticommute with \(Z_1Z_2Z_3Z_4\) and commute with \(X_1X_2X_3X_4\): any single \(X_j\). Take \(X_1\), giving \(\ket{1001}\).</p>
+<p>(b) \(X_1X_2X_3X_4\ket{1001} = \ket{0110}\), so each outcome has probability \(\tfrac12\). Outcome \(+1\) leaves \((\ket{1001} + \ket{0110})/\sqrt2 = \ket{01}_\L\). Outcome \(-1\) leaves \((\ket{1001} - \ket{0110})/\sqrt2\); applying \(Z_1\), which anticommutes with \(X_1X_2X_3X_4\) only, turns it into \(-\ket{01}_\L\). Either way the result is \(\ket{01}_\L\), not \(\ket{00}_\L\): choosing \(X_4\) instead in (a) would have given \(\ket{0000}\) and then \(\ket{00}_\L\). The stabilizers fix the codespace; which codeword you land on depends on the fixes, the point of the caveat on eq. 34.</p>
+</details></li>
+<li><p><strong>Shor syndromes and degeneracy.</strong> Order the Shor generators as in eq. 44: \(Z_1Z_2\), \(Z_2Z_3\), \(Z_4Z_5\), \(Z_5Z_6\), \(Z_7Z_8\), \(Z_8Z_9\), \(X_1\cdots X_6\), \(X_4\cdots X_9\). (a) Give the syndromes of \(X_5\), \(Z_5\) and \(Y_5\). (b) Which other single-qubit errors share the syndrome of \(Z_5\), and why does the decoder’s choice among them not matter?</p>
+<details class="solution"><summary>Solution</summary>
+<p>(a) \(X_5\) anticommutes with \(Z_4Z_5\) and \(Z_5Z_6\): 00110000. \(Z_5\) anticommutes with both \(X\) checks, since qubit 5 lies in both: 00000011. \(Y_5\) does both: 00110011.</p>
+<p>(b) \(Z_4\) and \(Z_6\) also lie in both \(X\) checks: 00000011. If the decoder answers \(Z_4\) to an actual \(Z_5\), then \(RE = Z_4Z_5\), a generator, so eq. 37 holds; \(Z_4Z_6 = Z_4Z_5 \cdot Z_5Z_6\) is a stabilizer too. The code is degenerate: these three errors need not be told apart.</p>
+</details></li>
+<li><p><strong>Two bit flips in the Shor code.</strong> The error \(X_1X_2\) hits the Shor code. (a) What is its syndrome? (b) The lookup decoder applies the single-qubit error with that syndrome. Which one, and what is the net operator? (c) Is the result harmless, detected, or a logical error? Contrast with \(Z_1Z_2\).</p>
+<details class="solution"><summary>Solution</summary>
+<p>(a) \(X_1X_2\) meets \(Z_1Z_2\) on two qubits (commute) and \(Z_2Z_3\) on one (anticommute): 01000000.</p>
+<p>(b) That is the syndrome of \(X_3\), so \(R = X_3\) and \(RE = X_1X_2X_3\).</p>
+<p>(c) \(X_1X_2X_3\) commutes with every generator but is not in \(\mathcal S\), whose \(X\)-type elements are \(X_1\cdots X_6\), \(X_4\cdots X_9\) and their product \(X_1X_2X_3X_7X_8X_9\). It is \(\bar Z\): a logical error. Distance 3 corrects one error, not two. \(Z_1Z_2\), by contrast, is itself a stabilizer: syndrome 0 and no effect.</p>
+</details></li>
+<li><p><strong>Why the Shor code has distance 3.</strong> Show that no Pauli error of weight at most 2 acts as a nontrivial logical operator on the Shor code. Hint: split the error into its \(X\) part and its \(Z\) part (a \(Y\) contributes to both); the \(Z\) checks see only the \(X\) part, and the \(X\) checks only the \(Z\) part.</p>
+<details class="solution"><summary>Solution</summary>
+<p>For the \(X\) part to pass the six \(Z\) checks, it must flip either none or all three qubits of each block, since each check compares two neighbours. With weight at most 2 no block can be complete, so the \(X\) part is \(\I\).</p>
+<p>For the \(Z\) part, let \(b_j\) be the parity of the number of \(Z\)s in block \(j\). The \(X\) checks read \(b_1 + b_2\) and \(b_2 + b_3\), so the \(Z\) part passes when \(b_1 = b_2 = b_3\). All three odd needs at least three \(Z\)s, so all are even: two \(Z\)s in one block, such as \(Z_1Z_3 = Z_1Z_2 \cdot Z_2Z_3\), a stabilizer.</p>
+<p>So every undetected error of weight at most 2 is harmless, while \(X_1X_2X_3\) and \(Z_1Z_4Z_7\) are logical operators of weight 3: \(d = 3\).</p>
+</details></li>
+</ol>
+
 </main>
 <footer>
 <p>Part 2 of <a href="index.html">Notes on quantum error correction</a>, by Shiwen An. The structure follows Joschka Roffe, <em>Quantum error correction: an introductory guide</em>, Contemporary Physics 60, 226 (2019), <a href="https://arxiv.org/abs/1907.11157">arXiv:1907.11157</a>, section 4; equation numbers in the margins refer to it. The text, figures and code here are original. Text under CC BY 4.0, code under the MIT licence. Revised 7 October 2026.</p>

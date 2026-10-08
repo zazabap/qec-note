@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Quantum LDPC Codes</title>
 <meta name="description" content="Quantum low-density parity-check codes: why sparse checks matter, the hypergraph product, and belief-propagation decoding and its failures, with an interactive hypergraph-product lattice. Part 4 of a set of notes on quantum error correction.">
-<link rel="stylesheet" href="assets/qec.css?v=20261007c">
+<link rel="stylesheet" href="assets/qec.css?v=20261007d">
 <script>
 window.MathJax = {
   tex: {
@@ -29,7 +29,7 @@ window.MathJax = {
 };
 </script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-svg.js"></script>
-<script type="module" src="assets/widgets.js?v=20261007c"></script>
+<script type="module" src="assets/widgets.js?v=20261007d"></script>
 </head>
 <body>
 <div class="wrap">
@@ -42,7 +42,7 @@ window.MathJax = {
 <main>
 <p class="crumbs">Notes on quantum error correction · Part 4 · beyond Roffe's guide · previous: <a href="03-css-codes.html">Part 3</a></p>
 <h1>Quantum LDPC codes</h1>
-<p class="lead">A code is low-density parity-check (LDPC) when every check touches only a few qubits and every qubit sits in only a few checks, however large the code grows. The surface code is one, but it encodes a single qubit. This part asks how to keep the checks small while encoding many qubits, builds the simplest general answer, the hypergraph product, and decodes it with belief propagation. The <a href="#figures">interactive figure</a> is at the end, followed by <a href="#references">references</a>.</p>
+<p class="lead">A code is low-density parity-check (LDPC) when every check touches only a few qubits and every qubit sits in only a few checks, however large the code grows. The surface code is one, but it encodes a single qubit. This part asks how to keep the checks small while encoding many qubits, builds the simplest general answer, the hypergraph product, and decodes it with belief propagation. The <a href="#figures">interactive figure</a> is at the end, followed by <a href="#problems">problems</a> and <a href="#references">references</a>.</p>
 
 <h2>What LDPC buys, and what it costs</h2>
 <p>A family of CSS codes is LDPC if the rows and columns of \(H_X\) and \(H_Z\) have weight at most some constant \(w\) independent of \(n\). Each stabilizer measurement then touches at most \(w\) qubits, syndrome extraction runs in constant depth, and an error on one ancilla spreads to few data qubits. Classically, LDPC codes decoded by belief propagation come close to the channel capacity (Gallager 1962), which is why they are in every modern communication standard.</p>
@@ -103,6 +103,42 @@ L_v = L_0 + \sum_{c \in N(v)} r_{c\to v}, \qquad q_{v\to c} = L_v - r_{c\to v},
 <h2 id="figures">Interactive figure</h2>
 <p>Choose two classical codes; the figure lays out their hypergraph product on a grid whose rows follow code 1 (bits and checks) and whose columns follow code 2. Bit-bit and check-check positions hold qubits, check-bit positions hold X checks, bit-check positions hold Z checks. For two repetition codes this is the surface-code lattice; for the Hamming code the checks reach across the grid, which a hover over a square shows. Click qubits to place errors, or sample them at rate \(p\), then decode with BP and scrub through the iterations: the rings show each qubit's belief that it carries an \(X\) (inner) or \(Z\) (outer) error. To reproduce the failures above, choose rep 5 for both codes and put \(X\) on qubits 1 and 2, or Hamming for both and put \(X\) on qubit 7.</p>
 <qec-hgp label="A" a="rep3" b="rep3" codes="rep3,rep4,rep5,ring3,ring4,hamming7" title="Hypergraph product codes and belief propagation"></qec-hgp>
+
+<h2 id="problems">Problems</h2>
+<p>Each solution is hidden until you open it. Numbers can be checked against the figures above.</p>
+<ol class="problems">
+<li><p><strong>Why the hypergraph product always commutes.</strong> Using \((A\otimes B)(C\otimes D) = AC\otimes BD\), show that \(H_X H_Z^{\mathsf T} = 0\) over \(\mathbb F_2\) for any \(H_1\) and \(H_2\).</p>
+<details class="solution"><summary>Solution</summary>
+<p>Multiply block by block:</p>
+\[
+H_X H_Z^{\mathsf T} = (H_1\otimes I)(I\otimes H_2^{\mathsf T}) + (I\otimes H_2^{\mathsf T})(H_1\otimes I) = H_1\otimes H_2^{\mathsf T} + H_1\otimes H_2^{\mathsf T} = 0 ,
+\]
+<p>since every entry appears twice and \(1 + 1 = 0\). The left blocks have \(n_1 n_2\) columns and the right blocks \(m_1 m_2\), which is where \(n = n_1n_2 + m_1m_2\) comes from.</p>
+</details></li>
+<li><p><strong>The surface and toric codes as products.</strong> Let \(H_{\text{rep}} = \begin{pmatrix}1&1&0\\0&1&1\end{pmatrix}\), and let \(H_{\text{ring}}\) be the \(4\times4\) matrix with rows \(1100, 0110, 0011, 1001\). (a) Find \(n, k, d\) of each code and \(k^{\mathsf T}, d^{\mathsf T}\) of its transpose. (b) Use the formulas to get the parameters of HGP(rep, rep) and HGP(ring, ring).</p>
+<details class="solution"><summary>Solution</summary>
+<p>(a) Repetition: \(m = 2\), \(n = 3\), rank 2, so \(k = 1\) and \(d = 3\). Its transpose is \(3\times2\) with rank 2, so \(k^{\mathsf T} = 2 - 2 = 0\) and \(d^{\mathsf T} = \infty\). Ring: the four rows sum to zero, so the rank is 3, \(k = 1\) (the word \(1111\)) and \(d = 4\); the transpose is again a ring, with \(k^{\mathsf T} = 1\) and \(d^{\mathsf T} = 4\).</p>
+<p>(b) HGP(rep, rep): \(n = 9 + 4 = 13\), \(k = 1\cdot1 + 0\cdot0 = 1\), \(d = \min(3, 3, \infty, \infty) = 3\): the \([[13,1,3]]\) surface code. HGP(ring, ring): \(n = 16 + 16 = 32\), \(k = 1 + 1 = 2\), \(d = 4\): the \([[32,2,4]]\) toric code, with its two logical qubits from the two cycles of the torus.</p>
+</details></li>
+<li><p><strong>Rate: the Hamming product.</strong> (a) Find the parameters of HGP(Hamming, Hamming). (b) Find its largest check weight and largest qubit degree. (c) How many qubits would sixteen Steane codes need to protect the same number of logical qubits at the same distance?</p>
+<details class="solution"><summary>Solution</summary>
+<p>(a) The Hamming matrix is \(3\times7\) with rank 3: \(k = 4\), \(d = 3\), and its transpose has \(k^{\mathsf T} = 0\), \(d^{\mathsf T} = \infty\). So \(n = 49 + 9 = 58\), \(k = 16 + 0 = 16\), \(d = 3\).</p>
+<p>(b) An \(X\) check has weight (row weight of \(H_1\)) + (column weight of \(H_2\)) \(= 4 + 3 = 7\) at most. A check-check qubit lies in one \(X\) check per 1 in a row of \(H_2\) and one \(Z\) check per 1 in a row of \(H_1\): \(4 + 4 = 8\).</p>
+<p>(c) \(16 \times 7 = 112\) qubits, against 58: the rate \(16/58 \approx 0.28\) is almost double the Steane code's \(1/7\).</p>
+</details></li>
+<li><p><strong>Belief propagation by hand.</strong> Decode the classical repetition code \(H = \begin{pmatrix}1&1&0\\0&1&1\end{pmatrix}\) with \(p = 0.1\) after a flip of bit 1, so \(s = (1, 0)\). Run min-sum with \(\alpha = 0.75\), as the figure does, for two iterations: give the messages, the \(L_v\) and the hard decision after each.</p>
+<details class="solution"><summary>Solution</summary>
+<p>\(L_0 = \ln 9 \approx 2.197\), and every \(q_{v\to c}\) starts at \(L_0\).</p>
+<p>Iteration 1. Check 1 (\(s = 1\)) sends \(-0.75 \times 2.197 = -1.648\) to bits 1 and 2; check 2 (\(s = 0\)) sends \(+1.648\) to bits 2 and 3. So \(L = (0.549,\ 2.197,\ 3.845)\): no bit looks flipped, the syndrome is not matched, and BP continues. The new messages \(q_{v\to c} = L_v - r_{c\to v}\) are \(q_{1\to1} = 2.197\), \(q_{2\to1} = 3.845\), \(q_{2\to2} = 0.549\), \(q_{3\to2} = 2.197\).</p>
+<p>Iteration 2. Check 1 sends \(-0.75 \times 3.845 = -2.884\) to bit 1 and \(-0.75 \times 2.197 = -1.648\) to bit 2; check 2 sends \(+1.648\) to bit 2 and \(+0.75 \times 0.549 = 0.412\) to bit 3. Now \(L = (-0.687,\ 2.197,\ 2.609)\), the hard decision is \(100\), and it matches the syndrome: converged in two iterations. Bit 2 hears opposite advice from its two checks, grows confident it is clean, and that confidence is what convinces check 1 to blame bit 1. With \(\alpha = 1\) the first iteration would end in a tie at \(L_1 = 0\).</p>
+</details></li>
+<li><p><strong>Degeneracy and belief propagation.</strong> Two errors \(E\) and \(E' = ES\), with \(S\) a stabilizer, have the same weight, the same syndrome and the same prior probability. Explain why belief propagation can stall on such a pair, why a minimum-weight decoder would not mind, and what ordered-statistics decoding adds.</p>
+<details class="solution"><summary>Solution</summary>
+<p>BP computes per-qubit marginals from local messages. When \(E\) and \(E'\) are equally likely and nothing else competes, the messages are symmetric under swapping them, so the qubits where they differ end up near probability \(\tfrac12\). Rounding each marginal separately then picks parts of both, a pattern that matches neither syndrome, and the iterations can oscillate instead of settling.</p>
+<p>A minimum-weight decoder returns \(E\) or \(E'\), and either is a correct recovery because they differ by a stabilizer (eq. 37). The trouble is particular to deciding qubit by qubit.</p>
+<p>OSD uses BP's soft output only to rank the qubits, then solves \(H\hat e = s\) exactly by Gaussian elimination on the most likely columns. The result always matches the syndrome, and the ranking breaks the tie in favour of one of the two equivalent answers.</p>
+</details></li>
+</ol>
 
 <h2 id="references">References</h2>
 <ol class="refs">

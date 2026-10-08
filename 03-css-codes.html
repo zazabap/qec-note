@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>CSS Codes</title>
 <meta name="description" content="CSS codes from pairs of classical codes: the commutation condition, separate decoding of X and Z errors, and the Steane [[7,1,3]] code, with interactive parity-check matrices and a code builder. Part 3 of a set of notes on quantum error correction.">
-<link rel="stylesheet" href="assets/qec.css?v=20261007c">
+<link rel="stylesheet" href="assets/qec.css?v=20261007d">
 <script>
 window.MathJax = {
   tex: {
@@ -29,7 +29,7 @@ window.MathJax = {
 };
 </script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-svg.js"></script>
-<script type="module" src="assets/widgets.js?v=20261007c"></script>
+<script type="module" src="assets/widgets.js?v=20261007d"></script>
 </head>
 <body>
 <div class="wrap">
@@ -42,7 +42,7 @@ window.MathJax = {
 <main>
 <p class="crumbs">Notes on quantum error correction · Part 3 · beyond Roffe's guide · previous: <a href="02-stabilizer-formalism.html">Part 2</a> · next: <a href="04-qldpc-codes.html">Part 4</a></p>
 <h1>CSS codes</h1>
-<p class="lead">Every code so far has had stabilizers made only of \(X\)s or only of \(Z\)s. Codes with that property are CSS codes, after Calderbank, Shor and Steane, and they are built from two classical codes: one to catch bit flips, one to catch phase flips. The <a href="#figures">interactive figures</a> are at the end; the <a href="#references">references</a> list where to read further.</p>
+<p class="lead">Every code so far has had stabilizers made only of \(X\)s or only of \(Z\)s. Codes with that property are CSS codes, after Calderbank, Shor and Steane, and they are built from two classical codes: one to catch bit flips, one to catch phase flips. The <a href="#figures">interactive figures</a> are at the end, followed by <a href="#problems">problems</a>; the <a href="#references">references</a> list where to read further.</p>
 
 <h2>Classical linear codes</h2>
 <p>A classical binary linear code \(C\) with parameters \([n, k, d]\) is a \(k\)-dimensional subspace of \(\mathbb F_2^n\) whose nonzero words all have weight at least \(d\). It is the kernel of a parity-check matrix \(H\), an \(m \times n\) binary matrix,</p>
@@ -106,6 +106,40 @@ d_Z &= \min\{ |v| : v \in \ker H_X \setminus \operatorname{row} H_Z \} .
 <qec-checks label="A" codes="steane,shor,four-two-two" initial="IIIIXII" decoder title="A CSS code as two parity-check matrices"></qec-checks>
 <p>Figure B builds a CSS code from any two classical codes of length seven and tests the condition \(H_X H_Z^{\mathsf T} = 0\). Hamming with Hamming gives the Steane code; Hamming with the even-weight code gives a \([[7,3,2]]\) detection code; Hamming with the repetition code fails, and the product matrix shows which checks anticommute.</p>
 <qec-css-builder label="B" x="hamming7" z="hamming7" title="Build a CSS code from two classical codes"></qec-css-builder>
+
+<h2 id="problems">Problems</h2>
+<p>Each solution is hidden until you open it. Numbers can be checked against the figures above.</p>
+<ol class="problems">
+<li><p><strong>The Steane code from the Hamming code.</strong> (a) Check \(H_{\text{Ham}} H_{\text{Ham}}^{\mathsf T} = 0\) by looking at row weights and overlaps. (b) What is \(k\)? (c) Give the weights of the eight basis states in \(\ket0_\L\) and in \(\ket1_\L = X^{\otimes7}\ket0_\L\), and use them to show that \(\bar Z = Z^{\otimes7}\) acts correctly.</p>
+<details class="solution"><summary>Solution</summary>
+<p>(a) Each row has weight 4 (even), and each pair of rows overlaps in two places (rows 1 and 2 at positions 6, 7; rows 1 and 3 at 5, 7; rows 2 and 3 at 3, 7). Every entry of the product is an even number, so zero mod 2.</p>
+<p>(b) \(k = 7 - 3 - 3 = 1\).</p>
+<p>(c) \(\ket0_\L\) is the sum over the simplex code: one word of weight 0 and seven of weight 4. Complementing gives \(\ket1_\L\): one word of weight 7 and seven of weight 3. \(Z^{\otimes7}\) multiplies a basis state by \((-1)^{\text{weight}}\): \(+1\) on every term of \(\ket0_\L\), \(-1\) on every term of \(\ket1_\L\).</p>
+</details></li>
+<li><p><strong>Decoding the Steane code by hand.</strong> (a) The error is \(X_3Z_5\). Compute \(s_Z = H_Z e_X\) and \(s_X = H_X e_Z\), and the correction. (b) The error is \(Y_6\). (c) The error is \(X_1X_2\). What does the decoder do, and what is left?</p>
+<details class="solution"><summary>Solution</summary>
+<p>(a) Column \(j\) of \(H_{\text{Ham}}\) is \(j\) in binary: \(s_Z = 011\) (3) and \(s_X = 101\) (5), so the decoder applies \(X_3\) and \(Z_5\).</p>
+<p>(b) \(Y_6\) has both parts: \(s_Z = s_X = 110\) (6). The decoder applies \(X_6\) and \(Z_6\), which equals \(Y_6\) up to a phase.</p>
+<p>(c) \(s_Z = 001 \oplus 010 = 011\), pointing at qubit 3, so the decoder applies \(X_3\). The net \(X_1X_2X_3\) has \(s_Z = 0\), and \(1110000\) is a Hamming codeword but not a simplex word (those have weight 0 or 4), so it is a weight-3 logical \(\bar X\): the same failure as \(X_1X_2\) in the Shor code.</p>
+</details></li>
+<li><p><strong>Shor's code as a CSS code.</strong> Write \(H_X\) and \(H_Z\) for the Shor code, check \(H_X H_Z^{\mathsf T} = 0\), find \(k\), and compute \(d_X\) and \(d_Z\) from their definitions.</p>
+<details class="solution"><summary>Solution</summary>
+<p>\(H_Z\) has six rows, \(110000000\), \(011000000\), \(000110000\), \(000011000\), \(000000110\) and \(000000011\); \(H_X\) has \(111111000\) and \(000111111\). Each \(X\) row meets each \(Z\) row in 0 or 2 places, so the product vanishes. The ranks are 6 and 2, so \(k = 9 - 2 - 6 = 1\).</p>
+<p>\(\ker H_Z\) is the set of words constant on each block (\(000\) or \(111\)). Removing \(\operatorname{row} H_X\), whose words are \(0\), \(111111000\), \(000111111\) and \(111000111\), leaves \(111000000\) as the lightest, so \(d_X = 3\). \(\ker H_X\) is the set of words whose blocks have equal parity; \(\operatorname{row} H_Z\) is the set with every block even. The lightest word outside is one bit per block, \(100100100\), so \(d_Z = 3\).</p>
+<p>The \(X\)-type logical \(X_1X_2X_3\) is the operator called \(\bar Z\) in part 2: the names follow the codewords of eq. 43, not the type of the operator.</p>
+</details></li>
+<li><p><strong>A detection code from the even-weight code.</strong> Take \(H_X = (1\,1\,1\,1\,1\,1\,1)\) and \(H_Z = H_{\text{Ham}}\). (a) Is this a valid CSS code? (b) What is \(k\)? (c) Find \(d_X\) and \(d_Z\). Which errors of weight 2 go undetected? (This is the \([[7,3,2]]\) code of figure B.)</p>
+<details class="solution"><summary>Solution</summary>
+<p>(a) The all-ones row meets each Hamming row in 4 places: even, so \(H_X H_Z^{\mathsf T} = 0\).</p>
+<p>(b) \(k = 7 - 1 - 3 = 3\).</p>
+<p>(c) \(d_X\): the lightest Hamming codeword outside \(\{0, 1111111\}\) has weight 3. \(d_Z\): \(\ker H_X\) is the even-weight words, \(\operatorname{row} H_Z\) is the simplex code (weights 0 and 4), and any weight-2 word lies in the first but not the second, so \(d_Z = 2\). All 21 errors \(Z_iZ_j\) go undetected and act as logical operators; every \(X\) error of weight 2 is detected.</p>
+</details></li>
+<li><p><strong>Why Hamming with repetition fails.</strong> Take \(H_X = H_{\text{Ham}}\) and \(H_Z\) the checks \(x_i \oplus x_{i+1}\) of the length-7 repetition code. Find a pair of checks that anticommute, and explain in terms of codes why no choice of rows could work.</p>
+<details class="solution"><summary>Solution</summary>
+<p>\(X_4X_5X_6X_7\) (the first Hamming row) and \(Z_3Z_4\) overlap only on qubit 4, so they anticommute; 10 of the 18 pairs do.</p>
+<p>\(H_X H_Z^{\mathsf T} = 0\) says every row of \(H_Z\) lies in \(\ker H_X\), the Hamming code. The repetition checks have weight 2, and the Hamming code has no nonzero word lighter than 3, so none of them can.</p>
+</details></li>
+</ol>
 
 <h2 id="references">References</h2>
 <ol class="refs">
