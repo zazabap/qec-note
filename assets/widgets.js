@@ -66,7 +66,7 @@ const pct = (v) => `${(100 * v).toFixed(1)}%`;
 /** Default input: α = 0.8, β = 0.6, so the two amplitudes are easy to tell apart. */
 const DEFAULT_THETA = 2 * Math.atan2(0.6, 0.8);
 
-const WIDGET_TAGS = 'qec-state-view, qec-code-view, qec-projection, qec-circuit, qec-suppression, qec-syndrome-table, qec-checks, qec-css-builder, qec-hgp';
+const WIDGET_TAGS = 'qec-state-view, qec-code-view, qec-projection, qec-circuit, qec-suppression, qec-syndrome-table, qec-checks, qec-css-builder, qec-hgp, qec-tanner';
 
 /** Mark the host as a widget (styling, and MathJax leaves it alone). */
 function setup(el) {
@@ -1735,6 +1735,290 @@ class QecTabs extends Base {
   }
 }
 
+/* ------------------------------------------------------- <qec-tanner> */
+
+/**
+ * Qubit positions, in abstract units, for the codes that have a picture of
+ * their own. Checks are placed at the centroid of their qubits; a Z check and
+ * an X check on the same qubits are nudged apart. `faces` shades each Z
+ * check's qubits as a polygon (the colour-code picture of the Steane code).
+ */
+const TANNER_LAYOUTS = {
+  shor: {
+    label: 'grid',
+    note: 'one row per block: Z checks sit between neighbours in a row, X checks between rows',
+    qubits: Array.from({ length: 9 }, (_, q) => [(q % 3) * 1.6, Math.floor(q / 3) * 1.8]),
+  },
+  steane: {
+    label: 'faces',
+    note: 'each row of the Hamming matrix is a face of four qubits, and every face carries one X check and one Z check',
+    qubits: (() => {
+      const c1 = [1.5, 0], c2 = [0, 2.6], c4 = [3, 2.6], c7 = [1.5, 1.733];
+      const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      return [c1, c2, mid(c1, c2), c4, mid(c1, c4), mid(c2, c4), c7];   // qubits 1..7
+    })(),
+    faces: true,
+  },
+  'four-two-two': {
+    label: 'square',
+    note: 'both checks touch all four qubits',
+    qubits: [[0, 0], [1.6, 0], [0, 1.6], [1.6, 1.6]],
+  },
+};
+
+/**
+ * Tanner graph of a classical code (bits and checks) or of a CSS code (qubits
+ * between Z-type and X-type checks). Clicking a node puts an error on it; a
+ * check lights when the errors it can see touch an odd number of its
+ * neighbours. Hovering a node shows its neighbourhood: a row or a column of
+ * the matrix. With `decoder`, the lightest explanation of the lit checks is
+ * found by search and its net effect reported.
+ *
+ *   <qec-tanner kind="classical" codes="hamming7,rep3" initial="0000100" decoder label="A"></qec-tanner>
+ *   <qec-tanner codes="steane,shor,four-two-two,three-qubit" initial="IIIIXII" decoder label="B"></qec-tanner>
+ */
+class QecTanner extends Base {
+  connectedCallback() {
+    if (this.dataset.ready) return;
+    this.dataset.ready = '1';
+    setup(this);
+    this.classical = attr(this, 'kind', 'css') === 'classical';
+    this.options = attr(this, 'codes', attr(this, 'code', this.classical ? 'hamming7' : 'steane')).split(',');
+    this.allowed = this.classical ? ['X'] : kinds(attr(this, 'allowed', 'XZY'));
+    this.maxWeight = Number(attr(this, 'search', '3'));
+    this.geometric = attr(this, 'layout', 'bipartite') === 'geometric';
+    this.id ||= nextId('tg');
+    this.setCode(this.options[0], attr(this, 'initial'));
+  }
+
+  setCode(name, initial) {
+    this.name = name;
+    if (this.classical) {
+      this.code = classical(name);
+      this.n = this.code.n;
+      this.HX = [];
+      this.HZ = this.code.H;                       // bit flips light the checks, as X errors light Z checks
+      this.err = initial ? Uint8Array.from(initial.replace(/[^01]/g, '').padEnd(this.n, '0').slice(0, this.n), Number) : new Uint8Array(this.n);
+    } else {
+      this.code = getCode(name);
+      this.n = this.code.n;
+      ({ HX: this.HX, HZ: this.HZ } = cssMatrices(this.code));
+      this.err = initial ? Pauli.fromString(initial, this.n) : Pauli.identity(this.n);
+    }
+    this.render();
+  }
+
+  /** The error split into the pattern the Z checks see (eX) and the one the X checks see (eZ). */
+  parts() {
+    if (this.classical) return { eX: this.err, eZ: new Uint8Array(this.n) };
+    return { eX: Uint8Array.from(this.err.x), eZ: Uint8Array.from(this.err.z) };
+  }
+
+  cycle(i) {
+    if (this.classical) this.err[i] ^= 1;
+    else {
+      const order = ['I', ...this.allowed];
+      this.err.set(i, order[(order.indexOf(this.err.at(i)) + 1) % order.length]);
+    }
+    this.render(i);
+  }
+
+  clear() {
+    this.err = this.classical ? new Uint8Array(this.n) : Pauli.identity(this.n);
+    this.render();
+  }
+
+  /* ---- layouts: node positions in SVG units */
+
+  bipartite() {
+    const n = this.n, mZ = this.HZ.length, mX = this.HX.length;
+    const s = 44, pad = 10;
+    const slots = Math.max(n, mZ, mX, 1);
+    const W = pad * 2 + slots * s;
+    const yZ = 0.9 * s, yQ = this.classical ? 2.7 * s : 2.8 * s, yX = 4.7 * s;
+    const H = (mX ? 5.6 : 3.5) * s;
+    const spread = (m, y) => Array.from({ length: m }, (_, i) => [pad + (i + 0.5) * ((W - 2 * pad) / m), y]);
+    return { qpos: spread(n, yQ), cpos: { Z: spread(mZ, yZ), X: spread(mX, yX) }, W, H, s, faces: [] };
+  }
+
+  geometricLayout() {
+    const L = TANNER_LAYOUTS[this.name];
+    const u = 76, pad = 28, s = 44;
+    const xs = L.qubits.map((p) => p[0]), ys = L.qubits.map((p) => p[1]);
+    const x0 = Math.min(...xs), y0 = Math.min(...ys);
+    const qpos = L.qubits.map(([x, y]) => [pad + (x - x0) * u, pad + (y - y0) * u]);
+    const W = pad * 2 + (Math.max(...xs) - x0) * u, H = pad * 2 + (Math.max(...ys) - y0) * u;
+    const members = (row) => { const idx = []; row.forEach((b, j) => { if (b) idx.push(j); }); return idx; };
+    const centroid = (row) => {
+      const idx = members(row), c = [0, 0];
+      for (const j of idx) { c[0] += qpos[j][0]; c[1] += qpos[j][1]; }
+      return [c[0] / idx.length, c[1] / idx.length];
+    };
+    const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+    const cZ = this.HZ.map(centroid), cX = this.HX.map(centroid);
+    this.HZ.forEach((rz, i) => this.HX.forEach((rx, k) => {
+      if (same(rz, rx)) { cZ[i] = [cZ[i][0] - 0.22 * u, cZ[i][1]]; cX[k] = [cX[k][0] + 0.22 * u, cX[k][1]]; }
+    }));
+    const faces = L.faces ? this.HZ.map((row) => {
+      const c = centroid(row);
+      return members(row).map((j) => qpos[j]).sort((p, q) => Math.atan2(p[1] - c[1], p[0] - c[0]) - Math.atan2(q[1] - c[1], q[0] - c[0]));
+    }) : [];
+    return { qpos, cpos: { Z: cZ, X: cX }, W, H, s, faces };
+  }
+
+  /* ---- drawing */
+
+  graph() {
+    const canGeo = Boolean(TANNER_LAYOUTS[this.name]) && !this.classical;
+    const g = canGeo && this.geometric ? this.geometricLayout() : this.bipartite();
+    const { eX, eZ } = this.parts();
+    const sZ = gf2.mulVec(this.HZ, eX), sX = gf2.mulVec(this.HX, eZ);
+    const unit = this.classical ? 'bit' : 'qubit';
+    const els = [];
+    const line = (a, b, cls) => svg('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1], class: cls });
+    g.faces.forEach((pts, i) => els.push(svg('polygon', { points: pts.map((p) => p.join(',')).join(' '), class: `tg-face${sZ[i] || sX[i] ? ' lit' : ''}` })));
+    const sides = [['Z', this.HZ, eX, sZ], ['X', this.HX, eZ, sX]];
+    for (const [T, Hm, e] of sides) {
+      Hm.forEach((row, i) => row.forEach((b, j) => {
+        if (b) els.push(line(g.cpos[T][i], g.qpos[j], `tg-edge${e[j] ? ` hit hit-${T === 'Z' ? 'X' : 'Z'}` : ''}`));
+      }));
+    }
+    const hover = svg('g', { class: 'tg-hover' });
+    els.push(hover);
+    const show = (pairs) => hover.replaceChildren(...pairs.map(([a, b]) => line(a, b, 'tg-edge tg-edge-hover')));
+    const hide = () => hover.replaceChildren();
+    const checkLabel = (T, i) => (this.classical ? `c${subscript(i + 1)}` : `${T}${subscript(i + 1)}`);
+    for (const [T, Hm, , s] of sides) {
+      Hm.forEach((row, i) => {
+        const [x, y] = g.cpos[T][i];
+        const nbrs = []; row.forEach((b, j) => { if (b) nbrs.push(j); });
+        const label = checkLabel(T, i);
+        const peek = () => show(nbrs.map((j) => [[x, y], g.qpos[j]]));
+        els.push(svg('g', { class: `hg-check hg-${T}${s[i] ? ' lit' : ''}`, tabindex: 0,
+          'aria-label': `check ${label} on ${unit}s ${nbrs.map((j) => j + 1).join(', ')}: ${s[i] ? 'odd parity, lit' : 'even parity'}`,
+          onpointerenter: peek, onpointerleave: hide, onfocus: peek, onblur: hide },
+          svg('title', {}, `${label}: ${unit}s ${nbrs.map((j) => j + 1).join(', ')} (degree ${nbrs.length}), ${s[i] ? 'odd parity: lit' : 'even parity: dark'}`),
+          svg('rect', { x: x - 0.3 * g.s, y: y - 0.3 * g.s, width: 0.6 * g.s, height: 0.6 * g.s, rx: 3 }),
+          svg('text', { x, y: y + 3.5, 'text-anchor': 'middle', class: `tg-clabel${s[i] ? ' lit' : ''}` }, label)));
+      });
+    }
+    g.qpos.forEach(([x, y], j) => {
+      const op = this.classical ? (eX[j] ? 'X' : 'I') : this.err.at(j);
+      const col = [];
+      this.HZ.forEach((r, i) => { if (r[j]) col.push(['Z', i]); });
+      this.HX.forEach((r, i) => { if (r[j]) col.push(['X', i]); });
+      const peek = () => show(col.map(([T, i]) => [g.cpos[T][i], [x, y]]));
+      const what = this.classical ? (op === 'I' ? 'not flipped' : 'flipped') : (op === 'I' ? 'no error' : `${op} error`);
+      els.push(svg('g', { class: `hg-qubit op-${op}`, role: 'button', tabindex: 0, 'data-q': j,
+        'aria-label': `${unit} ${j + 1}: ${what}. Activate to change.`,
+        onclick: () => this.cycle(j),
+        onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.cycle(j); } },
+        onpointerenter: peek, onpointerleave: hide, onfocus: peek, onblur: hide },
+        svg('title', {}, `${unit} ${j + 1}: checks ${col.map(([T, i]) => checkLabel(T, i)).join(', ') || 'none'}; ${what}`),
+        svg('circle', { cx: x, cy: y, r: 0.3 * g.s }),
+        svg('text', { x, y: y + 4, 'text-anchor': 'middle', class: op === 'I' ? 'tg-qlabel' : 'hg-op' },
+          this.classical || op === 'I' ? String(j + 1) : op)));
+    });
+    const desc = this.classical
+      ? `Tanner graph of the ${this.code.name}: ${this.n} bits (circles) and ${this.HZ.length} checks (squares)`
+      : `Tanner graph of the ${this.code.name}: ${this.n} qubits (circles) between ${this.HZ.length} Z-type checks and ${this.HX.length} X-type checks (squares)`;
+    return { svg: svg('svg', { viewBox: `0 0 ${g.W} ${g.H}`, class: 'tg-graph', style: { maxWidth: `${g.W}px` }, role: 'group', 'aria-label': desc }, els), sX, sZ, canGeo };
+  }
+
+  /* ---- readouts */
+
+  bits(s) { return s.length ? Array.from(s).join('') : '—'; }
+
+  litList(T, s) {
+    const out = [];
+    s.forEach((b, i) => { if (b) out.push(this.classical ? `c${subscript(i + 1)}` : `${T}${subscript(i + 1)}`); });
+    return out;
+  }
+
+  status(sX, sZ) {
+    const { eX, eZ } = this.parts();
+    const on = (e) => { const o = []; e.forEach((b, j) => { if (b) o.push(j + 1); }); return o; };
+    if (this.classical) {
+      const flips = on(eX), lit = this.litList('c', sZ);
+      if (!flips.length) return h('p', { class: 'status is-identity' }, 'No flips: every check sees even parity.');
+      if (!lit.length) return h('p', { class: 'status is-logical' }, `Flips on ${flips.join(', ')} light nothing: every check meets them an even number of times. This pattern is a codeword, invisible to the checks.`);
+      return h('p', { class: 'status is-detectable' }, `Flips on ${flips.join(', ')} light ${lit.join(', ')}: syndrome ${this.bits(sZ)}.`);
+    }
+    const c = this.code.classify(this.err), L = this.code.labels;
+    if (c.kind === 'identity') return h('p', { class: 'status is-identity' }, 'No error: every check sees even parity.');
+    if (c.kind === 'stabilizer') return h('p', { class: 'status is-stabilizer' }, `${this.err.toLabelled(L)} lights nothing and is a stabilizer: nothing has happened.`);
+    if (c.kind === 'logical') return h('p', { class: 'status is-logical' }, `${this.err.toLabelled(L)} lights nothing but acts as ${c.action.join(' ')}: an undetected logical error.`);
+    const litZ = this.litList('Z', sZ), litX = this.litList('X', sX);
+    return h('p', { class: 'status is-detectable' },
+      `${this.err.toLabelled(L)}: its X part (${on(eX).join(', ') || 'none'}) lights ${litZ.join(', ') || 'no Z check'}, s_Z = ${this.bits(sZ)}; its Z part (${on(eZ).join(', ') || 'none'}) lights ${litX.join(', ') || 'no X check'}, s_X = ${this.bits(sX)}.`);
+  }
+
+  decoder(sX, sZ) {
+    const { eX } = this.parts();
+    const name = (kind, e) => { const o = []; e.forEach((b, j) => { if (b) o.push(`${kind}${subscript(j + 1)}`); }); return o.join(''); };
+    const lines = [];
+    const half = (Hm, s, kind, who) => {
+      if (!Hm.length) return null;
+      if (s.every((b) => b === 0)) { lines.push(`${who}: syndrome ${this.bits(s)}, nothing to do.`); return null; }
+      const { weight, solutions } = gf2.lightestSolutions(Hm, s, this.n, this.maxWeight);
+      if (!solutions.length) { lines.push(`${who}: no pattern of up to ${this.maxWeight} ${this.classical ? 'flips' : kind + ' errors'} explains syndrome ${this.bits(s)}; the decoder gives up.`); return null; }
+      const names = solutions.map((e) => name(kind, e));
+      if (solutions.length === 1) lines.push(`${who}: the lightest explanation of ${this.bits(s)} is ${names[0]} (weight ${weight}), and nothing else that light fits. Apply it.`);
+      else lines.push(`${who}: ${names.join(', ')} each explain ${this.bits(s)} with weight ${weight}, and nothing says which. Taking ${names[0]}.`);
+      return solutions[0];
+    };
+    const corrX = half(this.HZ, sZ, 'X', this.classical ? 'Checks' : 'Z checks, X errors');
+    const corrZ = half(this.HX, sX, 'Z', 'X checks, Z errors');
+    let verdict, ok;
+    if (this.classical) {
+      const net = eX.map((b, j) => b ^ (corrX ? corrX[j] : 0));
+      const flips = []; net.forEach((b, j) => { if (b) flips.push(j + 1); });
+      if (!flips.length) { ok = true; verdict = eX.some((b) => b) ? 'Net flips: none. Recovered.' : 'Nothing to correct.'; }
+      else { ok = false; verdict = `Net flips on ${flips.join(', ')}: a codeword, so every check is satisfied and the message has silently changed. The decoder failed.`; }
+    } else {
+      const corr = Pauli.identity(this.n);
+      if (corrX) corrX.forEach((b, j) => { if (b) corr.multiplyAt(j, 'X'); });
+      if (corrZ) corrZ.forEach((b, j) => { if (b) corr.multiplyAt(j, 'Z'); });
+      const net = this.err.mul(corr), r = this.code.classify(net), L = this.code.labels;
+      ok = r.kind === 'identity' || r.kind === 'stabilizer';
+      verdict = this.err.isIdentity() && corr.isIdentity() ? 'Nothing to correct.'
+        : ok ? `Net effect ${net.toLabelled(L)}${r.kind === 'stabilizer' ? ', a stabilizer' : ''}: recovered.`
+          : `Net effect ${net.toLabelled(L)}: a logical ${r.action.join(' ')}. The decoder failed.`;
+    }
+    return h('div', { class: `decoder ${ok ? 'ok' : 'fail'}` }, lines.map((l) => h('p', { class: 'dec-line' }, l)), h('p', { class: 'dec-line' }, h('b', {}, verdict)));
+  }
+
+  render(focusIndex) {
+    const { svg: picture, sX, sZ, canGeo } = this.graph();
+    const code = this.code;
+    const deg = (Hm) => { const w = Hm.map((r) => r.reduce((a, b) => a + b, 0)); return w.length ? (Math.min(...w) === Math.max(...w) ? `${w[0]}` : `${Math.min(...w)}–${Math.max(...w)}`) : null; };
+    const meta = this.classical
+      ? `[${code.n}, ${code.k}, ${Number.isFinite(code.d) ? code.d : '∞'}] · ${code.m} checks of degree ${deg(this.HZ)} · lightest invisible set ${Number.isFinite(code.d) ? code.d : 'none'}`
+      : `${code.params()} · ${this.HZ.length} Z checks${this.HZ.length ? ` of degree ${deg(this.HZ)}` : ''}, ${this.HX.length} X checks${this.HX.length ? ` of degree ${deg(this.HX)}` : ''}`;
+    const L = canGeo ? TANNER_LAYOUTS[this.name] : null;
+    const hint = this.classical ? 'Click a bit to flip it. Hover a node to see its neighbourhood.' : `Click a qubit to cycle ${['no error', ...this.allowed].join(' → ')}. Hover a node to see its neighbourhood.`;
+    this.replaceChildren(...[
+      header(this, this.classical ? 'Tanner graph of a classical code' : 'Tanner graph of a CSS code', hint),
+      this.options.length > 1 ? h('label', { class: 'pick', for: `${this.id}-code` }, 'Code: ',
+        h('select', { id: `${this.id}-code`, onchange: (e) => this.setCode(e.target.value) },
+          this.options.map((o) => h('option', { value: o, selected: o === this.name }, this.classical ? classical(o).name : getCode(o).name)))) : null,
+      h('p', { class: 'w-meta' }, meta),
+      picture,
+      L ? h('div', { class: 'controls' },
+        h('span', { class: 'slider-name' }, 'Layout: '),
+        h('button', { type: 'button', class: `chip${this.geometric ? '' : ' on'}`, onclick: () => { this.geometric = false; this.render(); } }, 'bipartite'),
+        h('button', { type: 'button', class: `chip${this.geometric ? ' on' : ''}`, onclick: () => { this.geometric = true; this.render(); } }, L.label),
+        this.geometric ? h('span', { class: 'w-note' }, L.note) : null) : null,
+      this.status(sX, sZ),
+      flag(this, 'decoder') ? this.decoder(sX, sZ) : null,
+      h('div', { class: 'controls' },
+        h('button', { type: 'button', onclick: () => this.clear() }, this.classical ? 'Clear flips' : 'Clear errors'),
+        this.classical ? null : code.logicals.flatMap((l, j) => ['X', 'Z'].map((op) => h('button', { type: 'button',
+          onclick: () => { this.err = this.err.mul(l[op]); this.render(); } }, `Apply ${op}̄${code.logicals.length > 1 ? subscript(j + 1) : ''}`))))].filter(Boolean));
+    if (focusIndex !== undefined) this.querySelector(`.hg-qubit[data-q="${focusIndex}"]`)?.focus();
+  }
+}
+
 /* ---------------------------------------------------------- register */
 
 export const components = {
@@ -1746,6 +2030,7 @@ export const components = {
   'qec-checks': QecChecks,
   'qec-css-builder': QecCssBuilder,
   'qec-hgp': QecHgp,
+  'qec-tanner': QecTanner,
   'qec-circuit': QecCircuit,
   'qec-suppression': QecSuppression,
   'qec-syndrome-table': QecSyndromeTable,

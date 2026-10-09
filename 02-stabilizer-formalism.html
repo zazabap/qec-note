@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>The Stabilizer Formalism</title>
 <meta name="description" content="Roffe's section 4: stabilizer measurement, the stabilizer group, logical operators, how n, k and d are read off the generators, and encoding by projection, worked through two examples, the [[4,2,2]] detection code and Shor's [[9,1,3]] code with recovery and degeneracy, with the amplitudes drawn in the code's own basis. Part 2 of a set of notes on quantum error correction.">
-<link rel="stylesheet" href="assets/qec.css?v=20261007d">
+<link rel="stylesheet" href="assets/qec.css?v=20261009b">
 <script>
 window.MathJax = {
   tex: {
@@ -29,7 +29,7 @@ window.MathJax = {
 };
 </script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-svg.js"></script>
-<script type="module" src="assets/widgets.js?v=20261007d"></script>
+<script type="module" src="assets/widgets.js?v=20261009b"></script>
 </head>
 <body>
 <div class="wrap">
@@ -40,7 +40,7 @@ window.MathJax = {
   <span class="right"><a href="https://zazabap.github.io">zazabap.github.io</a></span>
 </nav>
 <main>
-<p class="crumbs">Notes on quantum error correction · Part 2 · follows Roffe, section 4 · previous: <a href="01-quantum-redundancy.html">Part 1</a> · next: <a href="03-css-codes.html">Part 3</a></p>
+<p class="crumbs">Notes on quantum error correction · Part 2 · follows Roffe, section 4 · previous: <a href="01-quantum-redundancy.html">Part 1</a> · next: <a href="02b-tanner-graphs.html">Part 2.5</a></p>
 <h1>The stabilizer formalism</h1>
 <p class="lead">Part 1 built codes one stabilizer at a time. Section 4 turns the recipe into a framework: a code is a commuting set of Pauli operators, its logical qubits are what those operators leave free, and the syndrome is a list of commutation signs. This part sets out the framework and works through two examples: the \([[4,2,2]]\) code, which detects errors, and Shor's \([[9,1,3]]\) code, which corrects them. The <a href="#figures">figures</a> are at the end, followed by <a href="#problems">problems</a>.</p>
 

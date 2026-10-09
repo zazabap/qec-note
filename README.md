@@ -7,6 +7,7 @@ Interactive notes on quantum error correction, served at
 |---|---|
 | [01-quantum-redundancy.html](01-quantum-redundancy.html) | Quantum redundancy and stabilizer measurement ([Roffe](https://arxiv.org/abs/1907.11157), §3) |
 | [02-stabilizer-formalism.html](02-stabilizer-formalism.html) | The stabilizer formalism, with the [[4,2,2]] and Shor [[9,1,3]] codes (Roffe, §4) |
+| [02b-tanner-graphs.html](02b-tanner-graphs.html) | Tanner graphs: checks and qubits as a picture, and decoding as a puzzle on it |
 | [03-css-codes.html](03-css-codes.html) | CSS codes and the Steane code |
 | [04-qldpc-codes.html](04-qldpc-codes.html) | Quantum LDPC codes: hypergraph products and belief propagation |
 

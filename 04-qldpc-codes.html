@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Quantum LDPC Codes</title>
 <meta name="description" content="Quantum low-density parity-check codes: why sparse checks matter, the hypergraph product, and belief-propagation decoding and its failures, with an interactive hypergraph-product lattice. Part 4 of a set of notes on quantum error correction.">
-<link rel="stylesheet" href="assets/qec.css?v=20261007d">
+<link rel="stylesheet" href="assets/qec.css?v=20261009b">
 <script>
 window.MathJax = {
   tex: {
@@ -29,7 +29,7 @@ window.MathJax = {
 };
 </script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-svg.js"></script>
-<script type="module" src="assets/widgets.js?v=20261007d"></script>
+<script type="module" src="assets/widgets.js?v=20261009b"></script>
 </head>
 <body>
 <div class="wrap">
@@ -85,7 +85,7 @@ d &= \min\bigl(d_1, d_2, d_1^{\mathsf T}, d_2^{\mathsf T}\bigr),
 <p>The \(\sqrt N\) distance of the hypergraph product was a barrier for a decade. Lifted-product and related constructions, which replace the entries of the matrices by elements of a group algebra, removed it: Panteleev and Kalachev (2022) gave families with \(k \propto N\) and \(d \propto N\), asymptotically good quantum LDPC codes. On the practical side, codes with constant rate reduce the overhead of fault tolerance to a constant factor (Gottesman 2013), and small quasi-cyclic codes such as the bivariate bicycle codes are designed for hardware with a few long-range couplers per qubit. Breuckmann and Eberhardt's review covers these constructions.</p>
 
 <h2>Decoding with belief propagation</h2>
-<p>By part 3, decoding \(X\) errors means solving \(H_Z \hat e = s_Z\) for a likely \(\hat e\), a classical problem on the Tanner graph of \(H_Z\) (qubits on one side, checks on the other). Belief propagation passes log-likelihood ratios along its edges. Each qubit starts from \(L_0 = \ln\frac{1-p}{p}\). In the min-sum form used in the figure, a check \(c\) with syndrome bit \(s_c\) tells each neighbour \(v\)</p>
+<p>By part 3, decoding \(X\) errors means solving \(H_Z \hat e = s_Z\) for a likely \(\hat e\), a classical problem on the Tanner graph of \(H_Z\) (<a href="02b-tanner-graphs.html">part 2.5</a>: qubits on one side, checks on the other). Belief propagation passes log-likelihood ratios along its edges. Each qubit starts from \(L_0 = \ln\frac{1-p}{p}\). In the min-sum form used in the figure, a check \(c\) with syndrome bit \(s_c\) tells each neighbour \(v\)</p>
 \[
 r_{c\to v} = (-1)^{s_c}\,\alpha\goodbreak \prod_{v' \in N(c)\setminus v} \operatorname{sgn} q_{v'\to c} \;\goodbreak\min_{v' \in N(c)\setminus v} |q_{v'\to c}| ,
 \]

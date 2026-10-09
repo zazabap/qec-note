@@ -161,3 +161,31 @@ export function cssLogicals(HX, HZ, n) {
   const N = transpose(inverse(M));
   return { X: LX, Z: mul(N, LZ) };
 }
+
+/** k-combinations of [0..n) in lexicographic order. */
+function* combos(n, k, start = 0, prefix = []) {
+  if (prefix.length === k) { yield prefix; return; }
+  for (let i = start; i <= n - (k - prefix.length); i++) yield* combos(n, k, i + 1, [...prefix, i]);
+}
+
+/**
+ * Every lightest vector e with A·e = s, searching weights 0..maxWeight: the
+ * minimum-weight decoding problem on the Tanner graph of A, solved by brute
+ * force for the small codes of the notes. Returns { weight, solutions }, with
+ * solutions = [] (and weight = null) when nothing up to maxWeight fits.
+ */
+export function lightestSolutions(A, s, n, maxWeight = 3) {
+  const c = cols(A, n);
+  const target = Array.from(s);
+  const fits = (e) => mulVec(A, e).every((b, i) => b === target[i]);
+  for (let w = 0; w <= Math.min(maxWeight, c); w++) {
+    const found = [];
+    for (const idx of combos(c, w)) {
+      const e = new Uint8Array(c);
+      for (const j of idx) e[j] = 1;
+      if (fits(e)) found.push(e);
+    }
+    if (found.length) return { weight: w, solutions: found };
+  }
+  return { weight: null, solutions: [] };
+}

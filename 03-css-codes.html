@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>CSS Codes</title>
 <meta name="description" content="CSS codes, starting from the three-qubit and Shor codes written as parity-check matrices: why Z checks catch X errors, the commutation condition, the classical codes behind each half, and the Steane [[7,1,3]] code with its codewords written out; interactive matrices and a code builder. Part 3 of a set of notes on quantum error correction.">
-<link rel="stylesheet" href="assets/qec.css?v=20261007d">
+<link rel="stylesheet" href="assets/qec.css?v=20261009b">
 <script>
 window.MathJax = {
   tex: {
@@ -29,7 +29,7 @@ window.MathJax = {
 };
 </script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-svg.js"></script>
-<script type="module" src="assets/widgets.js?v=20261007d"></script>
+<script type="module" src="assets/widgets.js?v=20261009b"></script>
 </head>
 <body>
 <div class="wrap">
@@ -40,7 +40,7 @@ window.MathJax = {
   <span class="right"><a href="https://zazabap.github.io">zazabap.github.io</a></span>
 </nav>
 <main>
-<p class="crumbs">Notes on quantum error correction · Part 3 · beyond Roffe's guide · previous: <a href="02-stabilizer-formalism.html">Part 2</a> · next: <a href="04-qldpc-codes.html">Part 4</a></p>
+<p class="crumbs">Notes on quantum error correction · Part 3 · beyond Roffe's guide · previous: <a href="02b-tanner-graphs.html">Part 2.5</a> · next: <a href="04-qldpc-codes.html">Part 4</a></p>
 <h1>CSS codes</h1>
 <p class="lead">Every stabilizer met so far has been made only of \(X\)s or only of \(Z\)s. Codes with that property are CSS codes, after Calderbank, Shor and Steane, and the property earns a part of its own: such a code is two classical codes in disguise, one catching bit flips and one catching phase flips, and everything about it can be read off two binary matrices. This part starts from the codes of parts 1 and 2, extracts the pattern, and then builds the Steane \([[7,1,3]]\) code from the classical Hamming code. The <a href="#figures">interactive figures</a> are at the end, followed by <a href="#problems">problems</a>; the <a href="#references">references</a> list where to read further.</p>
 
@@ -157,7 +157,7 @@ d_Z &= \min\{ |v| : v \in \ker H_X,\ v \notin \operatorname{row} H_Z \} .
 <p>Because \(H_X = H_Z\), swapping \(X \leftrightarrow Z\) maps the stabilizer group to itself, so a Hadamard on every qubit maps the codespace to itself and acts as a logical Hadamard. A gate applied qubit by qubit like this is called transversal, and every CSS code also has a transversal CNOT between two code blocks, which is one reason CSS codes are the usual setting for fault-tolerant computation.</p>
 
 <h2 id="figures">Interactive figures</h2>
-<p>Figure A shows a CSS code as its two check matrices, one column per qubit. Click a qubit to cycle through \(X\), \(Z\) and \(Y\): the \(X\) part of the error lights the rows of \(H_Z\) it anticommutes with, the \(Z\) part those of \(H_X\), and the decoder solves each half on its own. It opens on the Steane code with \(X_5\): the lit rows read \(s_Z = 101\), which is 5 in binary. The menu also holds the Shor code, the \([[4,2,2]]\) code, where any single error matches every column at once, and the three-qubit code with its empty \(H_X\).</p>
+<p>Figure A shows a CSS code as its two check matrices, one column per qubit; <a href="02b-tanner-graphs.html#figures">part 2.5</a> draws the same two matrices as a graph. Click a qubit to cycle through \(X\), \(Z\) and \(Y\): the \(X\) part of the error lights the rows of \(H_Z\) it anticommutes with, the \(Z\) part those of \(H_X\), and the decoder solves each half on its own. It opens on the Steane code with \(X_5\): the lit rows read \(s_Z = 101\), which is 5 in binary. The menu also holds the Shor code, the \([[4,2,2]]\) code, where any single error matches every column at once, and the three-qubit code with its empty \(H_X\).</p>
 <qec-checks label="A" codes="steane,shor,four-two-two,three-qubit" initial="IIIIXII" decoder title="A CSS code as two parity-check matrices"></qec-checks>
 <p>Figure B builds a CSS code from any two classical codes of length seven and tests the condition \(H_X H_Z^{\mathsf T} = 0\). Hamming with Hamming gives the Steane code; Hamming with the even-weight code gives a \([[7,3,2]]\) detection code; Hamming with the repetition code fails, and the product matrix shows which checks anticommute.</p>
 <qec-css-builder label="B" x="hamming7" z="hamming7" title="Build a CSS code from two classical codes"></qec-css-builder>
