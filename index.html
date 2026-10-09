@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Notes on Quantum Error Correction</title>
 <meta name="description" content="Notes on quantum error correction with interactive pictures of the amplitudes, subspaces and circuits, following Roffe's introductory guide; from stabilizer measurements to CSS and qLDPC codes.">
-<link rel="stylesheet" href="assets/qec.css?v=20261007d">
+<link rel="stylesheet" href="assets/qec.css?v=20261009b">
 <script>
 window.MathJax = {
   tex: {
@@ -48,7 +48,9 @@ window.MathJax = {
   <li><a href="01-quantum-redundancy.html"><b>Part 1.</b> Quantum redundancy and stabilizer measurement</a>
     <span class="desc">Roffe §3. The two- and three-qubit codes, codespace and error spaces, the syndrome-extraction circuit, error suppression by detection, and why the code distance of the three-qubit code is 1.</span></li>
   <li><a href="02-stabilizer-formalism.html"><b>Part 2.</b> The stabilizer formalism</a>
-    <span class="desc">Roffe §4. Stabilizer measurement, the stabilizer group, logical operators and encoding by projection, with two examples: the \([[4,2,2]]\) detection code, and recovery, degeneracy and concatenation in the Shor \([[9,1,3]]\) code.</span></li>
+    <span class="desc">Roffe §4. Stabilizer measurement, the stabilizer group, logical operators, how \(n\), \(k\) and \(d\) are read off the generators, and encoding by projection, with two examples: the \([[4,2,2]]\) detection code, and recovery, degeneracy and concatenation in the Shor \([[9,1,3]]\) code.</span></li>
+  <li><a href="02b-tanner-graphs.html"><b>Part 2.5.</b> Tanner graphs</a>
+    <span class="desc">Beyond the guide. Checks and qubits as a graph: syndromes light the checks, decoding as a puzzle on the graph, a CSS code as two graphs on one set of qubits, and the grid, face and lattice pictures behind the Shor, Steane and surface codes.</span></li>
   <li><a href="03-css-codes.html"><b>Part 3.</b> CSS codes</a>
     <span class="desc">Beyond the guide. Codes from two classical codes, separate decoding of \(X\) and \(Z\) errors, and the Steane \([[7,1,3]]\) code, with references.</span></li>
   <li><a href="04-qldpc-codes.html"><b>Part 4.</b> Quantum LDPC codes</a>
@@ -56,7 +58,7 @@ window.MathJax = {
 </ul>
 
 <h2>How the figures work</h2>
-<p>Circles are qubits. Clicking one applies a Pauli error to it and cycles through the errors that figure allows, typically no error, then \(X\), then \(Z\). Bars are amplitudes: the state is written in the computational basis and each basis state gets a column, drawn upward for a positive amplitude and downward for a negative one, with the columns grouped into the codespace \(\C\) and the error spaces \(\F_i\). Each stabilizer reports its eigenvalue on the current state, \(+1\) or \(-1\), and the syndrome collects those readings as bits. Circuit figures are stepped gate by gate, showing the register after each stage, split by the value of the ancilla.</p>
+<p>Circles are qubits and squares are checks. Clicking a qubit applies a Pauli error to it and cycles through the errors that figure allows, typically no error, then \(X\), then \(Z\). Bars are amplitudes: the state is written in the computational basis and each basis state gets a column, drawn upward for a positive amplitude and downward for a negative one, with the columns grouped into the codespace \(\C\) and the error spaces \(\F_i\). Each stabilizer reports its eigenvalue on the current state, \(+1\) or \(-1\), and the syndrome collects those readings as bits. Circuit figures are stepped gate by gate, showing the register after each stage, split by the value of the ancilla.</p>
 <p>Nothing is approximated. For the small codes of part 1 the figures keep a real state vector of \(2^N\) amplitudes with \(N \le 5\); syndromes, logical actions and distances are computed in the binary symplectic representation of Pauli operators, which is the calculation the stabilizer formalism asks you to do by hand and which continues to work for the large codes of later parts.</p>
 
 <h2>Notation</h2>

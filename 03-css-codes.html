@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>CSS Codes</title>
-<meta name="description" content="CSS codes from pairs of classical codes: the commutation condition, separate decoding of X and Z errors, and the Steane [[7,1,3]] code, with interactive parity-check matrices and a code builder. Part 3 of a set of notes on quantum error correction.">
-<link rel="stylesheet" href="assets/qec.css?v=20261007d">
+<meta name="description" content="CSS codes, starting from the three-qubit and Shor codes written as parity-check matrices: why Z checks catch X errors, the commutation condition, the classical codes behind each half, and the Steane [[7,1,3]] code with its codewords written out; interactive matrices and a code builder. Part 3 of a set of notes on quantum error correction.">
+<link rel="stylesheet" href="assets/qec.css?v=20261009b">
 <script>
 window.MathJax = {
   tex: {
@@ -29,7 +29,7 @@ window.MathJax = {
 };
 </script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-svg.js"></script>
-<script type="module" src="assets/widgets.js?v=20261007d"></script>
+<script type="module" src="assets/widgets.js?v=20261009b"></script>
 </head>
 <body>
 <div class="wrap">
@@ -40,70 +40,125 @@ window.MathJax = {
   <span class="right"><a href="https://zazabap.github.io">zazabap.github.io</a></span>
 </nav>
 <main>
-<p class="crumbs">Notes on quantum error correction · Part 3 · beyond Roffe's guide · previous: <a href="02-stabilizer-formalism.html">Part 2</a> · next: <a href="04-qldpc-codes.html">Part 4</a></p>
+<p class="crumbs">Notes on quantum error correction · Part 3 · beyond Roffe's guide · previous: <a href="02b-tanner-graphs.html">Part 2.5</a> · next: <a href="04-qldpc-codes.html">Part 4</a></p>
 <h1>CSS codes</h1>
-<p class="lead">Every code so far has had stabilizers made only of \(X\)s or only of \(Z\)s. Codes with that property are CSS codes, after Calderbank, Shor and Steane, and they are built from two classical codes: one to catch bit flips, one to catch phase flips. The <a href="#figures">interactive figures</a> are at the end, followed by <a href="#problems">problems</a>; the <a href="#references">references</a> list where to read further.</p>
+<p class="lead">Every stabilizer met so far has been made only of \(X\)s or only of \(Z\)s. Codes with that property are CSS codes, after Calderbank, Shor and Steane, and the property earns a part of its own: such a code is two classical codes in disguise, one catching bit flips and one catching phase flips, and everything about it can be read off two binary matrices. This part starts from the codes of parts 1 and 2, extracts the pattern, and then builds the Steane \([[7,1,3]]\) code from the classical Hamming code. The <a href="#figures">interactive figures</a> are at the end, followed by <a href="#problems">problems</a>; the <a href="#references">references</a> list where to read further.</p>
 
-<h2>Classical linear codes</h2>
-<p>A classical binary linear code \(C\) with parameters \([n, k, d]\) is a \(k\)-dimensional subspace of \(\mathbb F_2^n\) whose nonzero words all have weight at least \(d\). It is the kernel of a parity-check matrix \(H\), an \(m \times n\) binary matrix,</p>
+<h2>Two codes you already know, written as matrices</h2>
+<p>The three-qubit code of part 1 has stabilizers \(Z_1Z_2\) and \(Z_2Z_3\). Record where each one acts as a row of 0s and 1s, one column per qubit:</p>
+\[
+H_Z = H_{\text{rep}} = \begin{pmatrix} 1&1&0 \\ 0&1&1 \end{pmatrix}, \qquad \text{and no } X \text{ checks.}
+\]
+<p>A bit flip on qubit \(j\) anticommutes with exactly the stabilizers whose row has a 1 in column \(j\), so the syndrome can be read straight off the matrix: \(X_1\) flips the first check only, \(X_2\) both, \(X_3\) the second only. Write the error as a binary vector as well, \(e_X = 100\) for \(X_1\), \(010\) for \(X_2\), \(001\) for \(X_3\), and the three syndromes of part 1 are the three columns of \(H_Z\): in one formula, \(s = H_Z e_X\), with arithmetic mod 2. This matrix is the parity-check matrix of the classical three-bit repetition code, which flags a flipped bit by comparing neighbours; the quantum code makes the same comparisons with \(Z\)-type stabilizers.</p>
+<p>The Shor code of part 2 has eight stabilizers, six of \(Z\) type and two of \(X\) type, so it needs a matrix of each kind. Written in blocks of three qubits, with \(H_{\text{rep}}\) the \(2 \times 3\) matrix just above and \(0\) a \(2 \times 3\) block of zeros,</p>
 \[
 \begin{aligned}
-C &= \ker H = \{ c \in \mathbb F_2^n : Hc = 0 \}, \\
-k &= n - \operatorname{rank} H ,
+H_Z &= \begin{pmatrix} H_{\text{rep}} & 0 & 0 \\ 0 & H_{\text{rep}} & 0 \\ 0 & 0 & H_{\text{rep}} \end{pmatrix}, \\[0.4em]
+H_X &= \begin{pmatrix} 1\,1\,1 & 1\,1\,1 & 0\,0\,0 \\ 0\,0\,0 & 1\,1\,1 & 1\,1\,1 \end{pmatrix}.
 \end{aligned}
 \]
-<p>and a bit-flip pattern \(e\) is revealed by its syndrome \(s = He\), which depends only on \(e\), not on the codeword it hit. The dual code \(C^\perp\) is spanned by the rows of \(H\). The Hamming code \([7,4,3]\) has</p>
+<p>The six \(Z\) rows compare neighbouring qubits inside each block and catch bit flips exactly as the three-qubit code does, three times over; the two \(X\) rows compare the phases of neighbouring blocks and catch phase flips. The \([[4,2,2]]\) code of part 2 is the smallest case of all, \(H_X = H_Z = (1\,1\,1\,1)\), one check of each type. Figure A draws each of these codes as its pair of matrices.</p>
+<p>What the three codes share is that no stabilizer mixes \(X\) and \(Z\). That is the CSS property, and a code with it is specified completely by \(H_X\) and \(H_Z\). The rest of this part is about what those two matrices must satisfy and what they tell you.</p>
+
+<h2>\(Z\) checks catch \(X\) errors, and \(X\) checks catch \(Z\) errors</h2>
+<p>For a binary vector \(u\) of length \(n\), write \(X^{u}\) for the product of \(X\) on every qubit where \(u\) has a 1, so that \(X^{110} = X_1X_2\), and likewise \(Z^{v}\). Two such operators obey</p>
+\[
+X^{u} Z^{v} = (-1)^{u \cdot v}\, Z^{v} X^{u}, \qquad u \cdot v = \textstyle\sum_j u_j v_j \bmod 2,
+\]
+<p>because each qubit where both act contributes one sign of \(-1\). So they commute when they overlap on an even number of qubits and anticommute when the overlap is odd. A check \(Z^{h}\) is therefore flipped to \(-1\) by an error \(X^{e_X}\) exactly when \(h \cdot e_X = 1\), and it is blind to \(Z\) errors, which commute with it. Stacking the rows \(h\) of \(H_Z\) into one matrix product, and doing the same for \(H_X\), gives the two halves of the syndrome:</p>
+\[
+s_Z = H_Z\, e_X, \qquad s_X = H_X\, e_Z .
+\]
+<p>Here an arbitrary Pauli error has been split into its two parts, \(E = X^{e_X} Z^{e_Z}\) up to a phase; a \(Y_j\) puts a 1 in both \(e_X\) and \(e_Z\). The crossing of letters is the whole point of the construction, and the usual source of confusion: \(s_Z\) is the readout of the \(Z\)-type checks, and what they detect is bit flips.</p>
+<aside class="note">
+<p><strong>Naming.</strong> The subscripts on \(H_X, H_Z, s_X, s_Z\) name the Pauli type of the <em>checks</em>; the subscripts on \(e_X, e_Z\) name the type of the <em>error</em>. A \(Z\) check sees an \(X\) error. The three-qubit code has only \(Z\) checks, which is why it sees bit flips and nothing else.</p>
+</aside>
+
+<h2>Classical linear codes</h2>
+<p>Each half of the syndrome equation is a classical problem, so this is the place for the classical vocabulary. A binary linear code \(C\) with parameters \([n, k, d]\) is a set of \(2^k\) words of \(n\) bits that is closed under addition mod 2 and in which every nonzero word has at least \(d\) ones. It is usually given by a parity-check matrix \(H\) with \(m\) rows: the codewords are the words every check accepts,</p>
+\[
+C = \ker H = \{ c \in \mathbb F_2^n : Hc = 0 \}, \qquad k = n - \operatorname{rank} H ,
+\]
+<p>and a pattern of flips \(e\) added to any codeword shows up as the syndrome \(s = H(c \oplus e) = He\), which depends on the flips alone. The repetition code \([3,1,3]\) is the kernel of the matrix \(H_Z\) of the three-qubit code: its codewords are \(000\) and \(111\), each single flip has its own syndrome, and \(k = 3 - 2 = 1\). The Hamming code \([7,4,3]\) has</p>
 \[
 H_{\text{Ham}} = \begin{pmatrix} 0&0&0&1&1&1&1 \\ 0&1&1&0&0&1&1 \\ 1&0&1&0&1&0&1 \end{pmatrix},
 \]
-<p>whose \(j\)-th column is \(j\) written in binary, so the syndrome of a single flip is the position of the flipped bit. Its dual, spanned by the three rows, is the \([7,3,4]\) simplex code, and every simplex codeword is also a Hamming codeword: the Hamming code contains its dual.</p>
+<p>whose \(j\)-th column is the number \(j\) written in binary. Flipping bit \(j\) alone gives the syndrome \(He = \) column \(j\), so the decoder reads the syndrome as a number and flips that bit back: every single error is corrected, \(k = 7 - 3 = 4\), and the lightest nonzero codeword has weight 3.</p>
+<p>The dual code \(C^\perp\) consists of the words that overlap every codeword evenly; it is spanned by the rows of \(H\). The dual of the Hamming code is the simplex code \([7,3,4]\), whose eight words are the sums of rows of \(H_{\text{Ham}}\): the all-zero word and seven words of weight four, listed in the left column of table 1 below. Each of them is also a Hamming codeword, because every row of \(H_{\text{Ham}}\) has even weight and every pair of rows overlaps in exactly two places, so \(H_{\text{Ham}} h^{\mathsf T} = 0\) for each row \(h\). In matrix form, \(H_{\text{Ham}} H_{\text{Ham}}^{\mathsf T} = 0\); in words, the Hamming code contains its own dual, \(C^\perp \subset C\). This containment is the ingredient the Steane code needs.</p>
 
 <h2>The CSS construction</h2>
-<p>Take two binary matrices with \(n\) columns, \(H_X\) and \(H_Z\), and use each row \(h\) as the support of a stabilizer: \(X^{h} = \bigotimes_j X_j^{h_j}\) for the rows of \(H_X\) and \(Z^{h}\) for the rows of \(H_Z\). Operators of the same type always commute. \(X^{u}\) and \(Z^{v}\) commute exactly when they overlap on an even number of qubits, \(u \cdot v = 0\), so the whole set is a stabilizer group if and only if</p>
+<p>Now run the pattern backwards. Choose any two binary matrices with \(n\) columns, \(H_X\) and \(H_Z\), and declare the rows of \(H_X\) to be the supports of \(X\)-type stabilizers and the rows of \(H_Z\) the supports of \(Z\)-type ones. Checks of the same type commute automatically. By the sign rule above, an \(X\) row \(u\) and a \(Z\) row \(v\) commute when \(u \cdot v = 0\), so all the checks commute, and generate a stabilizer group, if and only if</p>
 \[
 H_X H_Z^{\mathsf T} = 0 .
 \]
-<p>An error \(E = X^{e_X} Z^{e_Z}\) (a \(Y\) counts in both) gives two separate syndromes, and the code has</p>
+<p>Read as codes, this says that every row of \(H_X\) lies in \(\ker H_Z\): the support of each \(X\) check must look like "no error" to every \(Z\) check, and symmetrically. For the Shor code, each \(X\) row covers two whole blocks, so every \(Z\) row, which compares two qubits of one block, meets it in zero or two places.</p>
+<p>The parameters follow the recipe of part 2 (<a href="02-stabilizer-formalism.html#nkd">reading \(n\), \(k\) and \(d\) off the stabilizers</a>). Each independent check halves the space, and here the independent checks are the independent rows, so</p>
+\[
+k = n - \operatorname{rank} H_X - \operatorname{rank} H_Z .
+\]
+<p>A logical \(\bar X\) is an \(X^{v}\) that no check detects, \(H_Z v = 0\), yet is not itself a product of \(X\) checks, \(v \notin \operatorname{row} H_X\); a logical \(\bar Z\) is the same with the roles swapped. The distance is the weight of the lightest logical operator of either type, \(d = \min(d_X, d_Z)\) with</p>
 \[
 \begin{aligned}
-s_X &= H_X\, e_Z, \\
-s_Z &= H_Z\, e_X, \\
-k &= n - \operatorname{rank} H_X - \operatorname{rank} H_Z .
+d_X &= \min\{ |v| : v \in \ker H_Z,\ v \notin \operatorname{row} H_X \}, \\
+d_Z &= \min\{ |v| : v \in \ker H_X,\ v \notin \operatorname{row} H_Z \} .
 \end{aligned}
 \]
-<p>A logical \(\bar X\) is an \(X^{v}\) that commutes with every \(Z\) check, \(v \in \ker H_Z\), without being a product of \(X\) checks, \(v \notin \operatorname{row} H_X\); a logical \(\bar Z\) is the same with the roles swapped. Hence \(d = \min(d_X, d_Z)\) with</p>
-\[
-\begin{aligned}
-d_X &= \min\{ |v| : v \in \ker H_Z \setminus \operatorname{row} H_X \}, \\
-d_Z &= \min\{ |v| : v \in \ker H_X \setminus \operatorname{row} H_Z \} .
-\end{aligned}
-\]
-<p>In the original formulation one chooses classical codes \(C_2 \subset C_1\) and sets \(H_Z = H(C_1)\) and \(\operatorname{row} H_X = C_2\), so that the commutation condition is exactly \(C_2 \subseteq C_1\). The codewords are uniform superpositions over cosets of \(C_2\) inside \(C_1\),</p>
+<p>Try it on the three-qubit code. \(\ker H_Z = \{000, 111\}\), and there are no \(X\) checks to subtract, so \(d_X = 3\) with \(\bar X = X_1X_2X_3\). With no \(H_X\) at all, \(\ker H_X\) is every word, while \(\operatorname{row} H_Z = \{000, 110, 011, 101\}\) is the even-weight words; the lightest word outside it has a single 1, so \(d_Z = 1\) with \(\bar Z = Z_1\). That is part 1's conclusion, \(d = 1\), in two lines, and it says in general that a CSS code needs rows in both matrices to have distance against both kinds of error. Problem 3 runs the same computation for the Shor code and finds \(d_X = d_Z = 3\).</p>
+
+<h2>The same construction in the language of codes</h2>
+<p>Calderbank, Shor and Steane described the construction with two classical codes rather than two matrices, and most of the literature follows them. Let \(C_1 = \ker H_Z\), the classical code whose checks catch bit flips, and \(C_2 = \operatorname{row} H_X\), the words that are supports of \(X\) checks. The commutation condition says precisely that \(C_2 \subseteq C_1\). The codewords are uniform superpositions over the cosets of \(C_2\) inside \(C_1\),</p>
 \[
 \ket{x + C_2} = \frac{1}{\sqrt{|C_2|}} \sum_{y \in C_2} \ket{x \oplus y}, \qquad x \in C_1 ,
 \]
-<p>giving an \([[n,\, k_1 - k_2,\, d]]\) code with \(d \ge \min\bigl(d(C_1), d(C_2^\perp)\bigr)\). Calderbank and Shor used this to show that families of quantum codes with nonzero rate and nonzero relative distance exist.</p>
+<p>and the reason is the projection of part 2 (eq. 34): applying \(\tfrac12(\I + X^{h})\) for each \(X\) check to \(\ket{x}\) adds the terms \(\ket{x \oplus y}\) for every sum \(y\) of rows, which is all of \(C_2\), while the \(Z\) checks are already \(+1\) on every term because \(x \oplus y \in C_1\). Two words \(x, x'\) give the same codeword exactly when \(x \oplus x' \in C_2\), so there are \(|C_1| / |C_2| = 2^{k_1 - k_2}\) codewords, \(k = k_1 - k_2\). A logical \(\bar X\) is a word of \(C_1\) and a logical \(\bar Z\) a word of \(\ker H_X = C_2^\perp\), so \(d \ge \min\bigl(d(C_1), d(C_2^\perp)\bigr)\). Table 2 is a dictionary between the two languages. Calderbank and Shor used the code form to prove that families of quantum codes with \(k/n\) and \(d/n\) both bounded away from zero exist, by choosing good classical codes with \(C_2 \subset C_1\).</p>
+<figure id="tab-2">
+<div class="fit"><table class="tbl">
+<thead><tr><th>In matrices</th><th>In codes</th></tr></thead>
+<tbody>
+<tr><td>rows of \(H_Z\): the \(Z\) checks</td><td>parity checks of \(C_1 = \ker H_Z\)</td></tr>
+<tr><td>rows of \(H_X\): the \(X\) checks</td><td>a basis of \(C_2 = \operatorname{row} H_X\)</td></tr>
+<tr><td>\(H_X H_Z^{\mathsf T} = 0\)</td><td>\(C_2 \subseteq C_1\)</td></tr>
+<tr><td>\(k = n - \operatorname{rank} H_X - \operatorname{rank} H_Z\)</td><td>\(k = k_1 - k_2\)</td></tr>
+<tr><td>\(d_X\): lightest word of \(\ker H_Z\) outside \(\operatorname{row} H_X\)</td><td>lightest word of \(C_1\) outside \(C_2\); at least \(d(C_1)\)</td></tr>
+<tr><td>\(d_Z\): lightest word of \(\ker H_X\) outside \(\operatorname{row} H_Z\)</td><td>lightest word of \(C_2^\perp\) outside \(C_1^\perp\); at least \(d(C_2^\perp)\)</td></tr>
+</tbody></table></div>
+<figcaption>Table 2. The CSS construction in its two languages. \(\ker\) and \(\operatorname{row}\) are the null space and the row space over \(\mathbb F_2\), and \(C^\perp\) is the dual code; \(\operatorname{row} H_Z = C_1^\perp\) and \(\ker H_X = C_2^\perp\).</figcaption>
+</figure>
 
 <h2>Decoding in two halves</h2>
-<p>Because \(s_Z\) sees only \(e_X\) and \(s_X\) sees only \(e_Z\), decoding a CSS code is two classical decoding problems: find \(\hat e_X\) with \(H_Z \hat e_X = s_Z\), and \(\hat e_Z\) with \(H_X \hat e_Z = s_X\). Any classical decoder for the two component codes can be reused. The price is that a \(Y\) error, which is correlated across the two halves, is treated as an independent \(X\) and \(Z\). This split is what makes CSS codes the default setting for the LDPC codes of <a href="04-qldpc-codes.html">part 4</a>.</p>
+<p>Because \(s_Z\) depends only on \(e_X\) and \(s_X\) only on \(e_Z\), decoding a CSS code is two classical decoding problems: find the lightest \(\hat e_X\) with \(H_Z \hat e_X = s_Z\) and the lightest \(\hat e_Z\) with \(H_X \hat e_Z = s_X\), then apply \(X^{\hat e_X} Z^{\hat e_Z}\). Any classical decoder for the two component codes can be reused. The price is that a \(Y\) error, which is correlated across the two halves, is treated as an independent \(X\) and \(Z\); that loses nothing when both halves decode correctly, since \(X_jZ_j\) is \(Y_j\) up to a phase, but it costs something when they do not. This split is what makes CSS codes the default setting for the LDPC codes of <a href="04-qldpc-codes.html">part 4</a>.</p>
 
 <h2>The Steane code</h2>
-<p>Choosing \(C_1\) the Hamming code and \(C_2 = C_1^\perp\) the simplex code gives \(H_X = H_Z = H_{\text{Ham}}\), and the \([[7,1,3]]\) Steane code:</p>
+<p>Everything is now in place for a code that corrects any single-qubit error with seven qubits, fewer than Shor's nine. Take \(H_X = H_Z = H_{\text{Ham}}\). The commutation condition is the containment checked above, \(H_{\text{Ham}} H_{\text{Ham}}^{\mathsf T} = 0\), and \(k = 7 - 3 - 3 = 1\). In the language of codes, \(C_1\) is the Hamming code and \(C_2 = C_1^\perp\) the simplex code, so \(k = 4 - 3 = 1\) and \(d \ge \min(3, 3) = 3\): the \([[7,1,3]]\) Steane code. Its two codewords are the two cosets of the simplex code inside the Hamming code,</p>
 \[
 \begin{aligned}
 \ket0_\L &= \tfrac{1}{\sqrt8} \sum_{y \in C_{\text{simplex}}} \ket{y}, \\
-\ket1_\L &= \bar X \ket0_\L, \\
-\bar X &= X^{\otimes 7}, \quad \bar Z = Z^{\otimes 7} .
+\ket1_\L &= \bar X \ket0_\L, \qquad \bar X = X^{\otimes 7}, \quad \bar Z = Z^{\otimes 7} ,
 \end{aligned}
 \]
-<p>\(\ket0_\L\) is the sum over the eight simplex codewords, the all-zero word and the seven words of weight four. \(X^{\otimes7}\) has weight seven, but multiplying by a weight-four stabilizer leaves a weight-three representative, which is the distance. Every single-qubit error is corrected, and the decoder is the Hamming decoder twice: an \(X\) error on qubit \(j\) gives \(s_Z = j\) in binary, a \(Z\) error gives \(s_X = j\), and a \(Y\) gives both. Because \(H_X = H_Z\), swapping \(X\) and \(Z\) maps the code to itself, which is why a transversal Hadamard, \(H\) on every qubit, implements a logical Hadamard. CSS codes in general also have a transversal logical CNOT between two blocks.</p>
-
-<h2>Codes from earlier parts, as CSS codes</h2>
-<p>The three-qubit code of part 1 has \(H_Z = \begin{pmatrix}1&1&0\\0&1&1\end{pmatrix}\) and no \(X\) checks. The \([[4,2,2]]\) code of part 2 has \(H_X = H_Z = (1\,1\,1\,1)\). The Shor code, also in part 2, has six rows of weight two in \(H_Z\), one per pair inside a block, and two rows of weight six in \(H_X\); the first figure shows all three.</p>
+<p>with the sixteen terms written out in table 1.</p>
+<figure id="tab-1">
+<div class="fit"><table class="tbl">
+<thead><tr><th>Term of \(\ket0_\L\)</th><th>Weight</th><th>Term of \(\ket1_\L\)</th><th>Weight</th></tr></thead>
+<tbody>
+<tr><td class="mono">0000000</td><td>0</td><td class="mono">1111111</td><td>7</td></tr>
+<tr><td class="mono">0001111</td><td>4</td><td class="mono">1110000</td><td>3</td></tr>
+<tr><td class="mono">0110011</td><td>4</td><td class="mono">1001100</td><td>3</td></tr>
+<tr><td class="mono">0111100</td><td>4</td><td class="mono">1000011</td><td>3</td></tr>
+<tr><td class="mono">1010101</td><td>4</td><td class="mono">0101010</td><td>3</td></tr>
+<tr><td class="mono">1011010</td><td>4</td><td class="mono">0100101</td><td>3</td></tr>
+<tr><td class="mono">1100110</td><td>4</td><td class="mono">0011001</td><td>3</td></tr>
+<tr><td class="mono">1101001</td><td>4</td><td class="mono">0010110</td><td>3</td></tr>
+</tbody></table></div>
+<figcaption>Table 1. The eight terms of each Steane codeword, all with amplitude \(1/\sqrt8\). The left column is the simplex code, the dual of the Hamming code; the right column is its complement, the other coset of the simplex code inside the Hamming code. Each right-hand word is the left-hand one with every bit flipped.</figcaption>
+</figure>
+<p>Why these are the codewords: start from \(\ket{0000000}\), which every \(Z\) check accepts, and project with the three \(X\) checks as in part 2. The product \((\I + X^{h_1})(\I + X^{h_2})(\I + X^{h_3})\) expands into the eight sums of rows, which are the simplex words, and each of them is a Hamming codeword, so the \(Z\) checks stay \(+1\) on every term: the containment \(C^\perp \subset C\) is used exactly here. \(\bar X = X^{\otimes 7}\) commutes with every check, because every row has even weight, and is not a product of \(X\) checks, whose supports have weight 0 or 4; it maps the left column of table 1 onto the right. \(\bar Z = Z^{\otimes 7}\) multiplies a basis state by \((-1)^{\text{weight}}\), which is \(+1\) on every term of \(\ket0_\L\) and \(-1\) on every term of \(\ket1_\L\).</p>
+<p>The distance is 3. \(X^{\otimes 7}\) times the weight-four stabilizer \(X^{0001111}\) is \(X_1X_2X_3\), a logical operator of weight three, and nothing lighter exists because the lightest Hamming codeword outside the simplex code has weight 3; that is \(d_X\), and \(d_Z\) is the same by the symmetry \(H_X = H_Z\). So every single-qubit error is corrected, and the decoder is the Hamming decoder run twice: an \(X\) error on qubit \(j\) gives \(s_Z = j\) in binary, a \(Z\) error gives \(s_X = j\), and a \(Y\) gives both. Figure A opens on this case: \(X_5\) lights the first and third rows of \(H_Z\), and \(101\) is 5.</p>
+<p>Because \(H_X = H_Z\), swapping \(X \leftrightarrow Z\) maps the stabilizer group to itself, so a Hadamard on every qubit maps the codespace to itself and acts as a logical Hadamard. A gate applied qubit by qubit like this is called transversal, and every CSS code also has a transversal CNOT between two code blocks, which is one reason CSS codes are the usual setting for fault-tolerant computation.</p>
 
 <h2 id="figures">Interactive figures</h2>
-<p>Figure A shows a CSS code as its two check matrices. Click a qubit to cycle through \(X\), \(Z\) and \(Y\): the \(X\) part of the error lights the rows of \(H_Z\) it anticommutes with, the \(Z\) part those of \(H_X\), and the decoder solves each half on its own. It opens on the Steane code with \(X_5\): the syndrome \(s_Z = 101\) is 5 in binary. Switch to the \([[4,2,2]]\) code to see a syndrome that matches every column.</p>
-<qec-checks label="A" codes="steane,shor,four-two-two" initial="IIIIXII" decoder title="A CSS code as two parity-check matrices"></qec-checks>
+<p>Figure A shows a CSS code as its two check matrices, one column per qubit; <a href="02b-tanner-graphs.html#figures">part 2.5</a> draws the same two matrices as a graph. Click a qubit to cycle through \(X\), \(Z\) and \(Y\): the \(X\) part of the error lights the rows of \(H_Z\) it anticommutes with, the \(Z\) part those of \(H_X\), and the decoder solves each half on its own. It opens on the Steane code with \(X_5\): the lit rows read \(s_Z = 101\), which is 5 in binary. The menu also holds the Shor code, the \([[4,2,2]]\) code, where any single error matches every column at once, and the three-qubit code with its empty \(H_X\).</p>
+<qec-checks label="A" codes="steane,shor,four-two-two,three-qubit" initial="IIIIXII" decoder title="A CSS code as two parity-check matrices"></qec-checks>
 <p>Figure B builds a CSS code from any two classical codes of length seven and tests the condition \(H_X H_Z^{\mathsf T} = 0\). Hamming with Hamming gives the Steane code; Hamming with the even-weight code gives a \([[7,3,2]]\) detection code; Hamming with the repetition code fails, and the product matrix shows which checks anticommute.</p>
 <qec-css-builder label="B" x="hamming7" z="hamming7" title="Build a CSS code from two classical codes"></qec-css-builder>
 
@@ -139,6 +194,20 @@ d_Z &= \min\{ |v| : v \in \ker H_X \setminus \operatorname{row} H_Z \} .
 <p>\(X_4X_5X_6X_7\) (the first Hamming row) and \(Z_3Z_4\) overlap only on qubit 4, so they anticommute; 10 of the 18 pairs do.</p>
 <p>\(H_X H_Z^{\mathsf T} = 0\) says every row of \(H_Z\) lies in \(\ker H_X\), the Hamming code. The repetition checks have weight 2, and the Hamming code has no nonzero word lighter than 3, so none of them can.</p>
 </details></li>
+<li><p><strong>The [[4,2,2]] code in both languages.</strong> Take \(H_X = H_Z = (1\,1\,1\,1)\). (a) List \(C_1 = \ker H_Z\) and \(C_2 = \operatorname{row} H_X\) as sets of words, with \(k_1\) and \(k_2\), and check \(C_2 \subseteq C_1\). (b) Compute \(k\) from the ranks and from \(k_1 - k_2\). (c) List the cosets of \(C_2\) in \(C_1\) and write the codeword each one gives; compare eq. 32 of part 2. (d) Compute \(d_X\) and \(d_Z\) from their definitions.</p>
+<details class="solution"><summary>Solution</summary>
+<p>(a) \(C_1\) is the even-weight words \(0000\), \(1100\), \(1010\), \(1001\), \(0110\), \(0101\), \(0011\), \(1111\), so \(k_1 = 3\). \(C_2 = \{0000, 1111\}\), \(k_2 = 1\). \(1111\) has even weight, so \(C_2 \subseteq C_1\); equivalently \((1\,1\,1\,1)\cdot(1\,1\,1\,1) = 4 = 0\) mod 2.</p>
+<p>(b) \(k = 4 - 1 - 1 = 2 = 3 - 1\).</p>
+<p>(c) The cosets \(x \oplus C_2\) are \(\{0000, 1111\}\), \(\{0110, 1001\}\), \(\{1010, 0101\}\) and \(\{1100, 0011\}\), and each coset summed with equal amplitudes is one codeword: \(\ket{00}_\L\), \(\ket{01}_\L\), \(\ket{10}_\L\) and \(\ket{11}_\L\) of eq. 32, in that order. Four cosets, \(2^k = 4\).</p>
+<p>(d) \(d_X\): the lightest word of \(C_1\) outside \(C_2\) has weight 2, for instance \(1100\), so \(d_X = 2\) and \(X_1X_2\) is a logical operator. \(d_Z\): \(\ker H_X\) is again the even-weight words and \(\operatorname{row} H_Z = \{0000, 1111\}\), so \(d_Z = 2\), with \(Z_1Z_2\). The code is \([[4,2,2]]\), as part 2 found by listing Pauli strings.</p>
+</details></li>
+<li><p><strong>Kernel or row space?</strong> A CSS code comes with four subspaces of \(\mathbb F_2^n\): \(\operatorname{row} H_X\), \(\ker H_Z\), \(\operatorname{row} H_Z\) and \(\ker H_X\). (a) For an \(X\)-type operator \(X^v\), say what each of \(v \in \operatorname{row} H_X\), \(v \in \ker H_Z\) and \(v \notin \ker H_Z\) means for the code, in the three classes of part 2: harmless, logical, detected. (b) For the Steane code name each of the four subspaces as a classical code and give its dimension. (c) Classify \(X^v\) for \(v = 1000000\), \(0001111\), \(1110000\) and \(1111111\), and give the syndrome where there is one. (d) Why are the answers for \(Z^v\) the same?</p>
+<details class="solution"><summary>Solution</summary>
+<p>(a) \(v \in \operatorname{row} H_X\): \(X^v\) is a product of \(X\) checks, a stabilizer, harmless. \(v \in \ker H_Z\): every \(Z\) check overlaps \(v\) evenly, so \(X^v\) commutes with all of them and gives syndrome zero; it is harmless if \(v\) is also in \(\operatorname{row} H_X\) and logical otherwise. \(v \notin \ker H_Z\): some \(Z\) check sees it, \(s_Z = H_Z v \ne 0\), detected. The \(X\) checks never enter, since they commute with every \(X^v\).</p>
+<p>(b) \(\ker H_Z = \ker H_X\) is the Hamming code \([7,4,3]\), dimension 4; \(\operatorname{row} H_X = \operatorname{row} H_Z\) is the simplex code \([7,3,4]\), dimension 3, whose seven non-zero words all have weight 4.</p>
+<p>(c) \(1000000\): weight 1, not a Hamming codeword, detected, with \(s_Z\) equal to column 1 of \(H_{\text{Ham}}\), \(001\). \(0001111\): a row of \(H_{\text{Ham}}\), so \(X_4X_5X_6X_7\) is a stabilizer. \(1110000\): each row of \(H_{\text{Ham}}\) meets it in 0 or 2 places, so it is a Hamming codeword, and its weight 3 is not a simplex weight: logical, the \(\bar X = X_1X_2X_3\) of the text. \(1111111\): meets every row in 4 places, so a Hamming codeword, and not in the simplex code: logical. It differs from \(1110000\) by \(0001111\), a stabilizer, so \(X^{\otimes7}\) and \(X_1X_2X_3\) are the same logical operator.</p>
+<p>(d) Swapping the roles of \(X\) and \(Z\) swaps \(H_X\) with \(H_Z\), and for the Steane code they are equal, so every statement about \(X^v\) holds for \(Z^v\) with \(s_X = H_X v\) in place of \(s_Z\).</p>
+</details></li>
 </ol>
 
 <h2 id="references">References</h2>
@@ -153,7 +222,7 @@ d_Z &= \min\{ |v| : v \in \ker H_X \setminus \operatorname{row} H_Z \} .
 </ol>
 </main>
 <footer>
-<p>Part 3 of <a href="index.html">Notes on quantum error correction</a>, by Shiwen An. The construction goes beyond Joschka Roffe, <em>Quantum error correction: an introductory guide</em>, <a href="https://arxiv.org/abs/1907.11157">arXiv:1907.11157</a>, which parts 1 and 2 follow; see the references above. The text, figures and code here are original. Text under CC BY 4.0, code under the MIT licence. Revised 24 September 2026.</p>
+<p>Part 3 of <a href="index.html">Notes on quantum error correction</a>, by Shiwen An. The construction goes beyond Joschka Roffe, <em>Quantum error correction: an introductory guide</em>, <a href="https://arxiv.org/abs/1907.11157">arXiv:1907.11157</a>, which parts 1 and 2 follow; see the references above. The text, figures and code here are original. Text under CC BY 4.0, code under the MIT licence. Revised 8 October 2026.</p>
 </footer>
 </div>
 </body>
